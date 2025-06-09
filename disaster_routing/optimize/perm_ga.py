@@ -1,9 +1,17 @@
+from functools import lru_cache
 import random
 
 
 def permutation_genetic_algorithm(
-    n, objective, population_size=100, generations=500, mutation_rate=0.2
+    n,
+    objective,
+    population_size=100,
+    generations=500,
+    mutation_rate=0.2,
+    lru_size=10000,
 ):
+    objective = lru_cache(lru_size)(objective)
+
     def random_perm():
         perm = list(range(n))
         random.shuffle(perm)
@@ -33,9 +41,9 @@ def permutation_genetic_algorithm(
     best_cost = float("inf")
 
     for gen in range(generations):
-        population.sort(key=objective)
-        if objective(population[0]) < best_cost:
-            best_cost = objective(population[0])
+        population.sort(key=lambda x: objective(tuple(x)))
+        if objective(tuple(population[0])) < best_cost:
+            best_cost = objective(tuple(population[0]))
             best_perm = population[0][:]
 
         # Select elites (top 20%)
