@@ -1,17 +1,31 @@
+from dataclasses import dataclass
+import logging
 from math import ceil
 from os import path as pth
 import pickle as pkl
-from random import random, choices, randint
+from random import random, choices, randint, shuffle
 from typing import cast
+
+import hydra
+from hydra.core.config_store import ConfigStore
+import networkx as nx
+import matplotlib.pyplot as plt
+
+from disaster_routing.routing.flow import FlowRoutingAlgorithm
 
 from .instances.instance import Instance
 from .instances.request import Request
 from .topologies.nsfnet import nsfnet
 from .placement.placement import solve_dc_placement
 from .routing.greedy import GreedyRoutingAlgorithm
+from .routing.routing_algo import Route, RoutingAlgorithm
+from .conflicts.conflict_graph import make_conflict_graph
+from .conflicts.odsa import solve_odsa
+from .optimize.perm_ga import permutation_genetic_algorithm
 
 topology = nsfnet()
 dc_positions = [2, 5, 6, 9, 11]
+# dc_positions = [2, 5, 9]
 
 content_count = 10
 transmission_rate_range = (0, 10)
@@ -55,9 +69,33 @@ def load_or_gen_instance(n: int, path: str = "instances/temp_instance.pkl") -> I
         return instance
 
 
-if __name__ == "__main__":
-    instance = load_or_gen_instance(10)
-    dc_placement = solve_dc_placement(instance, dc_positions)
+@dataclass
+class MainConfig:
+    router: str = "greedy"
+
+
+def create_router(router: str) -> RoutingAlgorithm:
+    match router:
+        case "greedy":
+            return GreedyRoutingAlgorithm()
+        case "flow":
+            return FlowRoutingAlgorithm()
+        case _:
+            raise ValueError(f"{router} is not a valid routing algorithm")
+
+
+cs = ConfigStore.instance()
+cs.store("main", node=MainConfig)
+
+log = logging.getLogger(__name__)
+
+
+@hydra.main(version_base=None, config_path="config", config_name="config")
+def my_main(cfg: MainConfig):
+    instance = load_or_gen_instance(100)
+    # dc_placement = solve_dc_placement(instance, dc_positions)
+    contents = set(req.content_id for req in instance.requests)
+    dc_placement = [list(contents) for _ in dc_positions]
     content_placement = [
         [
             dc
@@ -66,12 +104,55 @@ if __name__ == "__main__":
         ]
         for content in range(content_count)
     ]
-    print(content_placement)
+    log.debug("Content placement", content_placement)
 
-    router = GreedyRoutingAlgorithm()
+    router = create_router(cfg.router)
+    log.info(f"Using {cfg.router} router")
+    # router = FlowRoutingAlgorithm()
+    all_routes: list[list[Route]] = []
+    for i, req in enumerate(instance.requests):
+        dcs = content_placement[req.content_id]
+        routes = router.route_request(req, instance.topology, dcs)
+        router.check_solution(req, dcs, routes)
 
-    for req in instance.requests:
-        routes = router.route_request(
-            req, instance.topology, content_placement[req.content_id]
-        )
-        router.check_solution(req, content_placement[req.content_id], routes)
+        route_infos: list[str] = []
+        for j, route in enumerate(routes):
+            num_fs = ceil(
+                req.bpsk_fs_count
+                / route.format.relative_bpsk_rate()
+                / (len(routes) - 1)
+            )
+
+            route_infos.append(f"{route.node_list} ({route.format.name}, {num_fs} FS)")
+        log.debug(f"Request {i}", route_infos)
+        all_routes.append(routes)
+
+    # hello
+    conflict_graph, num_fses = make_conflict_graph(instance, all_routes)
+    # print("Conflict graph: ", conflict_graph)
+    # nx.draw(conflict_graph, pos=nx.layout.circular_layout(conflict_graph))
+    # plt.show()
+
+    perm = list(range(len(conflict_graph)))
+    shuffle(perm)
+    result = solve_odsa(conflict_graph, perm, num_fses)
+    mofi = max(a + b for a, b in zip(num_fses, result))
+    log.debug(f"Solving ODSA using permutation {perm} -> {result} (MOFI {mofi})")
+
+    best, mofi = permutation_genetic_algorithm(
+        len(conflict_graph),
+        lambda perm: max(
+            a + b for a, b in zip(num_fses, solve_odsa(conflict_graph, perm, num_fses))
+        ),
+        generations=50,
+    )
+
+    best = solve_odsa(conflict_graph, perm, num_fses)
+
+    log.debug("Using GA:", best, mofi)
+
+    log.info(f"Final solution: {sum(num_fses)} FS, MOFI {mofi}")
+
+
+if __name__ == "__main__":
+    my_main()

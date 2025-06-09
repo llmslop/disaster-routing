@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
+from statistics import mean
 from typing import override
 
+from ..instances.modulation import ModulationFormat
 from ..instances.request import Request
 from ..topologies.topology import Topology
 
@@ -8,10 +10,36 @@ from ..topologies.topology import Topology
 class Route:
     top: Topology
     node_list: list[int]
+    format: ModulationFormat
 
-    def __init__(self, top: Topology, node_list: list[int]):
+    def __init__(
+        self,
+        top: Topology,
+        node_list: list[int],
+        format: ModulationFormat | None = None,
+    ):
         self.top = top
         self.node_list = node_list
+        format = (
+            ModulationFormat.best_rate_format_with_distance(self.distance())
+            if format is None
+            else format
+        )
+        assert format is not None
+        self.format = format
+
+    def distance(self) -> int:
+        return sum(self.top.graph.edges[u, v]["weight"] for u, v in self.edges())
+
+    def edges(self) -> list[tuple[int, int]]:
+        return [
+            (self.node_list[i], self.node_list[i + 1])
+            for i in range(len(self.node_list) - 1)
+        ]
+
+    @override
+    def __repr__(self) -> str:
+        return str(self.node_list)
 
 
 class RoutingAlgorithm(ABC):
@@ -37,5 +65,7 @@ class RoutingAlgorithm(ABC):
         for i in range(len(dzs)):
             for j in range(i + 1, len(dzs)):
                 dz1, dz2 = dzs[i], dzs[j]
-                print(dz1, dz2, source_dz)
                 assert dz1.intersection(dz2).issubset(source_dz)
+
+    def num_avg_hops(self, routes: list[Route]) -> float:
+        return mean(len(route.node_list) - 1 for route in routes)

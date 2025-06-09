@@ -10,8 +10,9 @@ class DisasterZone:
         self.nodes = set(nodes)
         self.edges = set(edges)
 
-    def contains_path(self, path: list[int]):
-        if any(node in self.nodes for node in path):
+    def affects_path(self, path: list[int], exclude_source=False):
+        path_nodes = path if not exclude_source else path[1:]
+        if any(node in self.nodes for node in path_nodes):
             return True
 
         edges = ((path[i], path[i + 1]) for i in range(len(path) - 1))
