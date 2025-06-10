@@ -2,6 +2,21 @@ from copy import deepcopy
 import networkx as nx
 
 
+def make_digraph(graph: nx.Graph) -> nx.DiGraph:
+    """Converts an undirected NetworkX graph to a directed graph."""
+    digraph = nx.DiGraph()
+
+    # Copy nodes and their attributes
+    digraph.add_nodes_from(graph.nodes(data=True))
+
+    # For each edge (u, v), add both (u, v) and (v, u) to the DiGraph
+    for u, v, data in graph.edges(data=True):
+        digraph.add_edge(u, v, **data)
+        digraph.add_edge(v, u, **data)
+
+    return digraph
+
+
 class DisasterZone:
     nodes: set[int]
     edges: set[tuple[int, int]]

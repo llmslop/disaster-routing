@@ -11,17 +11,21 @@ from hydra.core.config_store import ConfigStore
 import networkx as nx
 import matplotlib.pyplot as plt
 
-from disaster_routing.routing.flow import FlowRoutingAlgorithm
-
+from .topologies.random import random_topology
 from .instances.instance import Instance
 from .instances.request import Request
 from .topologies.nsfnet import nsfnet
 from .placement.placement import solve_dc_placement
 from .routing.greedy import GreedyRoutingAlgorithm
+from .routing.flow import FlowRoutingAlgorithm
 from .routing.routing_algo import Route, RoutingAlgorithm
 from .conflicts.conflict_graph import make_conflict_graph
 from .conflicts.odsa import solve_odsa
+from .conflicts.mofi import calc_mofi
+from .conflicts.fpga import fpga
 from .optimize.perm_ga import permutation_genetic_algorithm
+from .optimize.perm_npm import permutation_npm
+
 
 topology = nsfnet()
 dc_positions = [2, 5, 6, 9, 11]
@@ -72,6 +76,8 @@ def load_or_gen_instance(n: int, path: str = "instances/temp_instance.pkl") -> I
 @dataclass
 class MainConfig:
     router: str = "greedy"
+    dsa_solver: str = "ga"
+    instance: str = "instances/temp_instance.pkl"
 
 
 def create_router(router: str) -> RoutingAlgorithm:
@@ -92,7 +98,7 @@ log = logging.getLogger(__name__)
 
 @hydra.main(version_base=None, config_path="config", config_name="config")
 def my_main(cfg: MainConfig):
-    instance = load_or_gen_instance(100)
+    instance = load_or_gen_instance(10, path=cfg.instance)
     # dc_placement = solve_dc_placement(instance, dc_positions)
     contents = set(req.content_id for req in instance.requests)
     dc_placement = [list(contents) for _ in dc_positions]
@@ -124,32 +130,41 @@ def my_main(cfg: MainConfig):
             )
 
             route_infos.append(f"{route.node_list} ({route.format.name}, {num_fs} FS)")
-        log.debug(f"Request {i}", route_infos)
         all_routes.append(routes)
 
-    # hello
     conflict_graph, num_fses = make_conflict_graph(instance, all_routes)
+    match cfg.dsa_solver:
+        case "ga":
+            best, mofi = permutation_genetic_algorithm(
+                len(conflict_graph),
+                lambda perm: max(
+                    a + b
+                    for a, b in zip(
+                        num_fses, solve_odsa(conflict_graph, perm, num_fses)
+                    )
+                ),
+                generations=max(10, len(instance.topology.graph)),
+            )
+            log.debug("Using GA:", best, mofi)
+        case "npm":
+            fpga_order = fpga(conflict_graph, num_fses)
+            best = solve_odsa(conflict_graph, fpga_order, num_fses)
+            mofi = calc_mofi(num_fses, best)
+            best, mofi = permutation_npm(
+                len(conflict_graph),
+                lambda perm: max(
+                    a + b
+                    for a, b in zip(
+                        num_fses, solve_odsa(conflict_graph, perm, num_fses)
+                    )
+                ),
+                fpga_order,
+            )
+            log.debug("Using NPM:", best, mofi)
+
     # print("Conflict graph: ", conflict_graph)
     # nx.draw(conflict_graph, pos=nx.layout.circular_layout(conflict_graph))
     # plt.show()
-
-    perm = list(range(len(conflict_graph)))
-    shuffle(perm)
-    result = solve_odsa(conflict_graph, perm, num_fses)
-    mofi = max(a + b for a, b in zip(num_fses, result))
-    log.debug(f"Solving ODSA using permutation {perm} -> {result} (MOFI {mofi})")
-
-    best, mofi = permutation_genetic_algorithm(
-        len(conflict_graph),
-        lambda perm: max(
-            a + b for a, b in zip(num_fses, solve_odsa(conflict_graph, perm, num_fses))
-        ),
-        generations=50,
-    )
-
-    best = solve_odsa(conflict_graph, perm, num_fses)
-
-    log.debug("Using GA:", best, mofi)
 
     log.info(f"Final solution: {sum(num_fses)} FS, MOFI {mofi}")
 

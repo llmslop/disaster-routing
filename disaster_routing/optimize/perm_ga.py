@@ -1,6 +1,8 @@
 from functools import lru_cache
 import random
 
+from .best import BestRecord
+
 
 def permutation_genetic_algorithm(
     n,
@@ -9,8 +11,9 @@ def permutation_genetic_algorithm(
     generations=500,
     mutation_rate=0.2,
     lru_size=10000,
-):
+) -> tuple[list[int], int]:
     objective = lru_cache(lru_size)(objective)
+    record = BestRecord[tuple[int, ...], int](objective)
 
     def random_perm():
         perm = list(range(n))
@@ -37,14 +40,9 @@ def permutation_genetic_algorithm(
     # Initial population
     population = [random_perm() for _ in range(population_size)]
 
-    best_perm = None
-    best_cost = float("inf")
-
     for gen in range(generations):
         population.sort(key=lambda x: objective(tuple(x)))
-        if objective(tuple(population[0])) < best_cost:
-            best_cost = objective(tuple(population[0]))
-            best_perm = population[0][:]
+        record.update(tuple(population[0]))
 
         # Select elites (top 20%)
         elites = population[: population_size // 5]
@@ -60,4 +58,4 @@ def permutation_genetic_algorithm(
 
         population = new_population
 
-    return best_perm, best_cost
+    return record.get()
