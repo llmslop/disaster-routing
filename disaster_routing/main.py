@@ -1,30 +1,25 @@
 from dataclasses import dataclass
 import logging
 from math import ceil
-from os import path as pth
 import pickle as pkl
 from random import random, choices, randint, shuffle
 from typing import cast
 
 import hydra
 from hydra.core.config_store import ConfigStore
-import networkx as nx
-import matplotlib.pyplot as plt
+# import networkx as nx
+# import matplotlib.pyplot as plt
 
-from .topologies.random import random_topology
 from .instances.instance import Instance
 from .instances.request import Request
 from .topologies.nsfnet import nsfnet
-from .placement.placement import solve_dc_placement
 from .routing.greedy import GreedyRoutingAlgorithm
 from .routing.flow import FlowRoutingAlgorithm
-from .routing.routing_algo import Route, RoutingAlgorithm
+from .routing.routing_algo import RoutingAlgorithm
 from .conflicts.conflict_graph import make_conflict_graph
-from .conflicts.odsa import solve_odsa
-from .conflicts.mofi import calc_mofi
-from .conflicts.fpga import fpga
-from .optimize.perm_ga import permutation_genetic_algorithm
-from .optimize.perm_npm import permutation_npm
+from .conflicts.solver import DSASolver
+from .conflicts.ga import GADSASolver
+from .conflicts.npm import NPMDSASolver
 
 
 topology = nsfnet()
@@ -90,6 +85,16 @@ def create_router(router: str) -> RoutingAlgorithm:
             raise ValueError(f"{router} is not a valid routing algorithm")
 
 
+def create_dsa_solver(solver: str, *args, **kwargs) -> DSASolver:
+    match solver:
+        case "ga":
+            return GADSASolver(*args, **kwargs)
+        case "npm":
+            return NPMDSASolver(*args, **kwargs)
+        case _:
+            raise ValueError(f"{solver} is not a valid DSA solver")
+
+
 cs = ConfigStore.instance()
 cs.store("main", node=MainConfig)
 
@@ -113,59 +118,18 @@ def my_main(cfg: MainConfig):
     log.debug("Content placement", content_placement)
 
     router = create_router(cfg.router)
-    log.info(f"Using {cfg.router} router")
-    # router = FlowRoutingAlgorithm()
-    all_routes: list[list[Route]] = []
-    for i, req in enumerate(instance.requests):
-        dcs = content_placement[req.content_id]
-        routes = router.route_request(req, instance.topology, dcs)
-        router.check_solution(req, dcs, routes)
-
-        route_infos: list[str] = []
-        for j, route in enumerate(routes):
-            num_fs = ceil(
-                req.bpsk_fs_count
-                / route.format.relative_bpsk_rate()
-                / (len(routes) - 1)
-            )
-
-            route_infos.append(f"{route.node_list} ({route.format.name}, {num_fs} FS)")
-        all_routes.append(routes)
+    log.debug(f"Using {cfg.router} router")
+    all_routes = [
+        router.route_request_checked(
+            req, instance.topology, content_placement[req.content_id]
+        )
+        for req in instance.requests
+    ]
 
     conflict_graph, num_fses = make_conflict_graph(instance, all_routes)
-    match cfg.dsa_solver:
-        case "ga":
-            best, mofi = permutation_genetic_algorithm(
-                len(conflict_graph),
-                lambda perm: max(
-                    a + b
-                    for a, b in zip(
-                        num_fses, solve_odsa(conflict_graph, perm, num_fses)
-                    )
-                ),
-                generations=max(10, len(instance.topology.graph)),
-            )
-            log.debug("Using GA:", best, mofi)
-        case "npm":
-            fpga_order = fpga(conflict_graph, num_fses)
-            best = solve_odsa(conflict_graph, fpga_order, num_fses)
-            mofi = calc_mofi(num_fses, best)
-            best, mofi = permutation_npm(
-                len(conflict_graph),
-                lambda perm: max(
-                    a + b
-                    for a, b in zip(
-                        num_fses, solve_odsa(conflict_graph, perm, num_fses)
-                    )
-                ),
-                fpga_order,
-            )
-            log.debug("Using NPM:", best, mofi)
-
-    # print("Conflict graph: ", conflict_graph)
-    # nx.draw(conflict_graph, pos=nx.layout.circular_layout(conflict_graph))
-    # plt.show()
-
+    log.debug(f"Using {cfg.dsa_solver} DSA solver")
+    dsa_solver = create_dsa_solver(cfg.dsa_solver, conflict_graph, num_fses)
+    best, mofi = dsa_solver.solve()
     log.info(f"Final solution: {sum(num_fses)} FS, MOFI {mofi}")
 
 

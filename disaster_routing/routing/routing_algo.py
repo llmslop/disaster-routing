@@ -48,6 +48,13 @@ class RoutingAlgorithm(ABC):
         self, req: Request, top: Topology, dst: list[int]
     ) -> list[Route]: ...
 
+    def route_request_checked(
+        self, req: Request, top: Topology, dst: list[int]
+    ) -> list[Route]:
+        ans = self.route_request(req, top, dst)
+        self.check_solution(req, dst, ans)
+        return ans
+
     def check_solution(self, req: Request, dst: list[int], routes: list[Route]):
         tops = set(route.top for route in routes)
         assert len(tops) == 1
