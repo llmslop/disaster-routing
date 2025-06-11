@@ -46,7 +46,11 @@ def permutation_npm(
             )
             for sample_group in samples
         ]
-        best_sample_idx = min(range(len(sample_costs)), key=lambda i: sample_costs[i])
+
+        best_sample_indices = [
+            i for i in range(len(sample_costs)) if sample_costs[i] == min(sample_costs)
+        ]
+        best_sample_idx = random.choice(best_sample_indices)
 
         if (
             record.cost is None
