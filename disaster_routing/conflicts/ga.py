@@ -1,21 +1,40 @@
-from typing import Any, override
-import networkx as nx
+from dataclasses import dataclass
+from typing import override
 
 from .solver import DSASolver
+from .conflict_graph import ConflictGraph
 from ..optimize.perm_ga import permutation_genetic_algorithm
 
 
 class GADSASolver(DSASolver):
-    kwargs: dict[str, Any]
+    pop_size: int
+    generations: int
+    mutation_rate: float
+    lru_size: int
 
-    def __init__(self, graph: nx.Graph, num_fses: list[int], **kwargs):
-        super().__init__(graph, num_fses)
-        self.kwargs = kwargs
+    def __init__(
+        self,
+        conflict_graph: ConflictGraph,
+        pop_size: int = 100,
+        generations: int = 50,
+        mutation_rate: float = 0.2,
+        lru_size: int = 10000,
+    ):
+        super().__init__(conflict_graph)
+        self.pop_size = pop_size
+        self.generations = generations
+        self.mutation_rate = mutation_rate
+        self.lru_size = lru_size
 
     @override
     def solve_for_odsa_perm(self) -> list[int]:
         best_perm, _ = permutation_genetic_algorithm(
-            len(self.graph), self.calc_mofi_from_perm, **self.kwargs
+            len(self.conflict_graph.graph),
+            self.calc_mofi_from_perm,
+            population_size=self.pop_size,
+            generations=self.generations,
+            mutation_rate=self.mutation_rate,
+            lru_size=self.lru_size,
         )
 
-        return best_perm
+        return list(best_perm)

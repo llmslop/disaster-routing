@@ -1,17 +1,18 @@
 from functools import lru_cache
 import random
+from typing import Callable
 
 from .best import BestRecord
 
 
 def permutation_genetic_algorithm(
-    n,
-    objective,
-    population_size=100,
-    generations=500,
-    mutation_rate=0.2,
-    lru_size=10000,
-) -> tuple[list[int], int]:
+    n: int,
+    objective: Callable[[tuple[int, ...]], int],
+    population_size: int = 100,
+    generations: int = 500,
+    mutation_rate: float = 0.2,
+    lru_size: int = 10000,
+) -> tuple[tuple[int, ...], int]:
     objective = lru_cache(lru_size)(objective)
     record = BestRecord[tuple[int, ...], int](objective)
 
@@ -20,19 +21,19 @@ def permutation_genetic_algorithm(
         random.shuffle(perm)
         return perm
 
-    def mutate(perm):
+    def mutate(perm: list[int]):
         a, b = random.sample(range(n), 2)
         perm[a], perm[b] = perm[b], perm[a]
 
-    def crossover(p1, p2):
+    def crossover(p1: list[int], p2: list[int]):
         # Order Crossover (OX)
         start, end = sorted(random.sample(range(n), 2))
-        child = [None] * n
+        child = [0] * n
         child[start:end] = p1[start:end]
         fill = [x for x in p2 if x not in child]
         j = 0
         for i in range(n):
-            if child[i] is None:
+            if child[i] == 0:
                 child[i] = fill[j]
                 j += 1
         return child
@@ -42,7 +43,7 @@ def permutation_genetic_algorithm(
 
     for gen in range(generations):
         population.sort(key=lambda x: objective(tuple(x)))
-        record.update(tuple(population[0]))
+        _ = record.update(tuple(population[0]))
 
         # Select elites (top 20%)
         elites = population[: population_size // 5]
@@ -58,4 +59,7 @@ def permutation_genetic_algorithm(
 
         population = new_population
 
-    return record.get()
+    best, cost = record.get()
+    assert best is not None
+    assert cost is not None
+    return best, cost

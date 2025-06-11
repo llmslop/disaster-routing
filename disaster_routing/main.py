@@ -1,12 +1,16 @@
-from dataclasses import dataclass
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 import logging
 from math import ceil
 import pickle as pkl
 from random import random, choices, randint, shuffle
-from typing import cast
+from typing import Any, cast
+from hydra.utils import instantiate
+from omegaconf import MISSING
 
 import hydra
 from hydra.core.config_store import ConfigStore
+
 # import networkx as nx
 # import matplotlib.pyplot as plt
 
@@ -16,10 +20,9 @@ from .topologies.nsfnet import nsfnet
 from .routing.greedy import GreedyRoutingAlgorithm
 from .routing.flow import FlowRoutingAlgorithm
 from .routing.routing_algo import RoutingAlgorithm
-from .conflicts.conflict_graph import make_conflict_graph
-from .conflicts.solver import DSASolver
-from .conflicts.ga import GADSASolver
-from .conflicts.npm import NPMDSASolver
+from .routing.config import RoutingAlgorithmConfig, register_routing_algo_configs
+from .conflicts.conflict_graph import ConflictGraph
+from .conflicts.config import DSASolverConfig, register_dsa_solver_configs
 
 
 topology = nsfnet()
@@ -70,38 +73,24 @@ def load_or_gen_instance(n: int, path: str = "instances/temp_instance.pkl") -> I
 
 @dataclass
 class MainConfig:
-    router: str = "greedy"
-    dsa_solver: str = "ga"
+    defaults: list[Any] = field(
+        default_factory=lambda: ["_self_", {"dsa_solver": "ga"}, {"router": "greedy"}]
+    )
+    router: RoutingAlgorithmConfig = MISSING
+    dsa_solver: DSASolverConfig = MISSING
     instance: str = "instances/temp_instance.pkl"
-
-
-def create_router(router: str) -> RoutingAlgorithm:
-    match router:
-        case "greedy":
-            return GreedyRoutingAlgorithm()
-        case "flow":
-            return FlowRoutingAlgorithm()
-        case _:
-            raise ValueError(f"{router} is not a valid routing algorithm")
-
-
-def create_dsa_solver(solver: str, *args, **kwargs) -> DSASolver:
-    match solver:
-        case "ga":
-            return GADSASolver(*args, **kwargs)
-        case "npm":
-            return NPMDSASolver(*args, **kwargs)
-        case _:
-            raise ValueError(f"{solver} is not a valid DSA solver")
+    force_recreate: bool = False
 
 
 cs = ConfigStore.instance()
-cs.store("main", node=MainConfig)
+cs.store(name="config", node=MainConfig)
+register_dsa_solver_configs()
+register_routing_algo_configs()
 
 log = logging.getLogger(__name__)
 
 
-@hydra.main(version_base=None, config_path="config", config_name="config")
+@hydra.main(version_base=None, config_name="config")
 def my_main(cfg: MainConfig):
     instance = load_or_gen_instance(10, path=cfg.instance)
     # dc_placement = solve_dc_placement(instance, dc_positions)
@@ -115,22 +104,17 @@ def my_main(cfg: MainConfig):
         ]
         for content in range(content_count)
     ]
-    log.debug("Content placement", content_placement)
+    log.debug(f"Content placement: {content_placement}")
 
-    router = create_router(cfg.router)
+    router = instantiate(cfg.router)
     log.debug(f"Using {cfg.router} router")
-    all_routes = [
-        router.route_request_checked(
-            req, instance.topology, content_placement[req.content_id]
-        )
-        for req in instance.requests
-    ]
+    all_routes = router.route_instance(instance, content_placement)
 
-    conflict_graph, num_fses = make_conflict_graph(instance, all_routes)
+    conflict_graph = ConflictGraph(instance, all_routes)
     log.debug(f"Using {cfg.dsa_solver} DSA solver")
-    dsa_solver = create_dsa_solver(cfg.dsa_solver, conflict_graph, num_fses)
+    dsa_solver = instantiate(cfg.dsa_solver, conflict_graph)
     best, mofi = dsa_solver.solve()
-    log.info(f"Final solution: {sum(num_fses)} FS, MOFI {mofi}")
+    log.info(f"Final solution: {conflict_graph.total_fs()} FS, MOFI {mofi}")
 
 
 if __name__ == "__main__":

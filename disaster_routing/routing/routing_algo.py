@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from statistics import mean
 from typing import override
 
+from ..instances.instance import Instance
 from ..instances.modulation import ModulationFormat
 from ..instances.request import Request
 from ..topologies.topology import Topology
@@ -76,3 +77,13 @@ class RoutingAlgorithm(ABC):
 
     def num_avg_hops(self, routes: list[Route]) -> float:
         return mean(len(route.node_list) - 1 for route in routes)
+
+    def route_instance(
+        self, inst: Instance, content_placement: list[list[int]]
+    ) -> list[list[Route]]:
+        return [
+            self.route_request_checked(
+                req, inst.topology, content_placement[req.content_id]
+            )
+            for req in inst.requests
+        ]
