@@ -2,8 +2,8 @@
 
 Current issues:
 
+- [x] DZ edges in NSFNET or not
 - [ ] DC placement
-- [ ] DZ edges in NSFNET or not
 - [ ] Flow routing does not respect DZ edges
 
 Planned features:
