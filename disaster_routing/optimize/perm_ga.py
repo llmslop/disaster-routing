@@ -28,12 +28,12 @@ def permutation_genetic_algorithm(
     def crossover(p1: list[int], p2: list[int]):
         # Order Crossover (OX)
         start, end = sorted(random.sample(range(n), 2))
-        child = [0] * n
+        child = [-1] * n
         child[start:end] = p1[start:end]
         fill = [x for x in p2 if x not in child]
         j = 0
         for i in range(n):
-            if child[i] == 0:
+            if child[i] < 0:
                 child[i] = fill[j]
                 j += 1
         return child
