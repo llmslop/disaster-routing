@@ -60,8 +60,12 @@ def gen_instance(n: int) -> Instance:
     return Instance(topology, gen_requests(n))
 
 
-def load_or_gen_instance(n: int, path: str = "instances/temp_instance.pkl") -> Instance:
+def load_or_gen_instance(
+    n: int, path: str = "instances/temp_instance.pkl", force_recreate: bool = False
+) -> Instance:
     try:
+        if force_recreate:
+            raise IOError()
         with open(path, "rb") as f:
             return cast(Instance, pkl.load(f))
     except IOError:
@@ -92,7 +96,9 @@ log = logging.getLogger(__name__)
 
 @hydra.main(version_base=None, config_name="config")
 def my_main(cfg: MainConfig):
-    instance = load_or_gen_instance(10, path=cfg.instance)
+    instance = load_or_gen_instance(
+        10, path=cfg.instance, force_recreate=cfg.force_recreate
+    )
     # dc_placement = solve_dc_placement(instance, dc_positions)
     contents = set(req.content_id for req in instance.requests)
     dc_placement = [list(contents) for _ in dc_positions]
@@ -106,14 +112,13 @@ def my_main(cfg: MainConfig):
     ]
     log.debug(f"Content placement: {content_placement}")
 
-    router = instantiate(cfg.router)
-    log.debug(f"Using {cfg.router} router")
+    log.debug(f"Using {cfg.router} router, {cfg.dsa_solver} DSA solver")
+    router: RoutingAlgorithm = instantiate(cfg.router)
     all_routes = router.route_instance(instance, content_placement)
-
     conflict_graph = ConflictGraph(instance, all_routes)
-    log.debug(f"Using {cfg.dsa_solver} DSA solver")
     dsa_solver = instantiate(cfg.dsa_solver, conflict_graph)
     best, mofi = dsa_solver.solve()
+
     log.info(f"Final solution: {conflict_graph.total_fs()} FS, MOFI {mofi}")
 
 
