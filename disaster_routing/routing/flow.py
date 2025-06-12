@@ -136,7 +136,10 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                     sink_nodes[i] = f"DZ{i}_sink"
 
                 if len(dz.nodes.intersection(dst)) > 0:
-                    flow_graph.add_edge(sink_nodes[i], "sink", capacity=1)
+                    if req.source in dz.nodes:
+                        flow_graph.add_edge(sink_nodes[i], "sink")
+                    else:
+                        flow_graph.add_edge(sink_nodes[i], "sink", capacity=1)
 
             for i, dzi in enumerate(top.dzs):
                 for j in range(i + 1, len(top.dzs)):
