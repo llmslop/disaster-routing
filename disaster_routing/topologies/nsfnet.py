@@ -3,7 +3,7 @@ from .topology import DisasterZone, Topology
 from statistics import mean
 
 
-def nsfnet() -> Topology:
+def nsfnet(enable_cross_edges: bool = False) -> Topology:
     graph = nx.DiGraph()
     graph.add_nodes_from(range(1, 15, 1))
     assert len(graph.nodes) == 14
@@ -44,21 +44,22 @@ def nsfnet() -> Topology:
     avg_degree = mean(graph.in_degree[i] for i in graph.nodes)
     assert abs(avg_degree - 3.14) < 0.01, f"{avg_degree} should be 3.14"
 
-    dzs = [DisasterZone([node]) for node in graph]
+    dzs = [DisasterZone(set(node)) for node in graph]
 
-    affected_edges = [
-        (2, 1, 3),
-        (5, 4, 11),
-        (9, 11, 13),
-        (9, 12, 14),
-        (10, 6, 14),
-        (12, 11, 13),
-        (13, 12, 14),
-    ]
+    if enable_cross_edges:
+        affected_edges = [
+            (2, 1, 3),
+            (5, 4, 11),
+            (9, 11, 13),
+            (9, 12, 14),
+            (10, 6, 14),
+            (12, 11, 13),
+            (13, 12, 14),
+        ]
 
-    affected_edges = affected_edges + [(dz, b, a) for dz, a, b in affected_edges]
-    for dzi, a, b in affected_edges:
-        dzs[dzi - 1].edges.add((a, b))
+        affected_edges = affected_edges + [(dz, b, a) for dz, a, b in affected_edges]
+        for dzi, a, b in affected_edges:
+            dzs[dzi - 1].edges.add((a, b))
 
     return Topology(graph, dzs)
 
