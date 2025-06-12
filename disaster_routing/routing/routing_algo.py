@@ -79,7 +79,7 @@ class RoutingAlgorithm(ABC):
         return mean(len(route.node_list) - 1 for route in routes)
 
     def route_instance(
-        self, inst: Instance, content_placement: list[list[int]]
+        self, inst: Instance, content_placement: dict[int, list[int]]
     ) -> list[list[Route]]:
         return [
             self.route_request_checked(

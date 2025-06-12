@@ -1,5 +1,7 @@
 from copy import deepcopy
+from typing import cast
 import networkx as nx
+from networkx.readwrite.json_graph import node_link_data, node_link_graph
 
 
 def make_digraph(graph: nx.Graph) -> nx.DiGraph:
@@ -37,6 +39,19 @@ class DisasterZone:
         g.remove_nodes_from(self.nodes)
         g.remove_edges_from(self.edges)
 
+    @staticmethod
+    def from_json(data: dict[str, object]) -> "DisasterZone":
+        return DisasterZone(
+            set(cast(list[int], data["nodes"])),
+            set((edge[0], edge[1]) for edge in cast(list[list[int]], data["edges"])),
+        )
+
+    def to_json(self) -> object:
+        return {
+            "nodes": list(self.nodes),
+            "edges": list(self.edges),
+        }
+
 
 class Topology:
     graph: nx.DiGraph
@@ -45,3 +60,19 @@ class Topology:
     def __init__(self, graph: nx.DiGraph, dzs: list[DisasterZone]):
         self.graph = graph
         self.dzs = deepcopy(dzs)
+
+    @staticmethod
+    def from_json(data: dict[str, object]) -> "Topology":
+        return Topology(
+            node_link_graph(data["graph"], edges="links"),
+            [
+                DisasterZone.from_json(dz)
+                for dz in cast(list[dict[str, object]], data["dzs"])
+            ],
+        )
+
+    def to_json(self) -> object:
+        return {
+            "graph": node_link_data(self.graph, edges="links"),
+            "dzs": [dz.to_json() for dz in self.dzs],
+        }

@@ -44,7 +44,7 @@ def nsfnet(enable_cross_edges: bool = False) -> Topology:
     avg_degree = mean(graph.in_degree[i] for i in graph.nodes)
     assert abs(avg_degree - 3.14) < 0.01, f"{avg_degree} should be 3.14"
 
-    dzs = [DisasterZone(set(node)) for node in graph]
+    dzs = [DisasterZone({node}) for node in graph]
 
     if enable_cross_edges:
         affected_edges = [
