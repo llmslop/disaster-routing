@@ -10,3 +10,8 @@ dependencies = [
     "networkx>=3.5",
     "numpy>=2.3.0",
 ]
+
+[tool.pyright]
+typeCheckingMode = "recommended"
+reportAny = "none"
+reportExplicitAny = "none"
