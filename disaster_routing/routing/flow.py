@@ -1,14 +1,12 @@
 from math import ceil
 from typing import cast, override
-from collections import defaultdict
 import networkx as nx
 import numpy as np
-import matplotlib.pyplot as plt
 
 from .routing_algo import RoutingAlgorithm, Route
-from ..instances.modulation import ModulationFormat
 from ..instances.request import Request
 from ..topologies.topology import Topology
+from ..topologies.graphs import Graph, StrDiGraph
 
 
 def extract_dz_index(name: str) -> int | None:
@@ -37,16 +35,24 @@ def cast_node_type(node: int) -> str:
     return cast(str, cast(object, node))
 
 
-def extract_all_flow_paths(G, source, sink, flow_dict=None):
-    if flow_dict is None:
-        flow_dict = nx.min_cost_flow(G)
+def extract_all_flow_paths(
+    G: StrDiGraph,
+    source: str,
+    sink: str,
+    flow_dict_n: dict[str, dict[str, int]] | None = None,
+) -> list[list[str]]:
+    flow_dict = (
+        flow_dict_n
+        if flow_dict_n is not None
+        else cast(dict[int, dict[str, int]], nx.min_cost_flow(G))
+    )
 
     # Convert flow_dict into a modifiable flow graph
     flow_graph = {u: dict(v) for u, v in flow_dict.items()}
 
-    paths = []
+    paths: list[list[str]] = []
 
-    def find_path():
+    def find_path() -> list[str] | None:
         path = [source]
         current = source
         while current != sink:
@@ -71,7 +77,7 @@ def extract_all_flow_paths(G, source, sink, flow_dict=None):
     return paths
 
 
-def reconstruct_min_hop_path(G, group_path) -> list[int]:
+def reconstruct_min_hop_path(G: Graph, group_path: list[set[int]]) -> list[int]:
     # group_path: list of sets of nodes (G1, G2, ..., Gk)
     # Returns: (min_path, hop_count)
 
@@ -101,7 +107,7 @@ def reconstruct_min_hop_path(G, group_path) -> list[int]:
             return []  # no path possible
 
     # Get the best among last group
-    end_node, (total_hops, path) = min(dp.items(), key=lambda x: x[1][0])
+    _, (total_hops, path) = min(dp.items(), key=lambda x: x[1][0])
     return path
 
 
@@ -110,12 +116,11 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
     def route_request(self, req: Request, top: Topology, dst: list[int]) -> list[Route]:
         assert len(dst) >= 2
 
-        routes: list[Route] = []
         best_route_set: list[Route] | None = None
         best_route_set_cost = np.inf
 
         for K in range(1, len(dst) + 1):
-            flow_graph = nx.DiGraph()
+            flow_graph = StrDiGraph()
 
             flow_graph.add_node("source", demand=-K)
             flow_graph.add_node("sink", demand=K)
@@ -152,7 +157,7 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                         flow_graph.add_edge(sink_nodes[j], source_nodes[i], weight=1)
 
             try:
-                flow = nx.min_cost_flow(flow_graph)
+                flow = cast(dict[str, dict[str, int]], nx.min_cost_flow(flow_graph))
                 dz_paths = extract_all_flow_paths(flow_graph, "source", "sink", flow)
                 routes: list[Route] = []
                 for dz_path in dz_paths:
@@ -166,7 +171,7 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                     routes.append(Route(top, path))
                     self.check_solution(req, dst, routes)
                 if len(routes) >= 2:
-                    cost = self.route_set_cost(top, routes, req.bpsk_fs_count)
+                    cost = self.route_set_cost(routes, req.bpsk_fs_count)
                     if cost < best_route_set_cost:
                         best_route_set = list(routes)
                         best_route_set_cost = cost
@@ -180,7 +185,6 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
 
     def route_set_cost(
         self,
-        top: Topology,
         routes: list[Route],
         total_fs_bpsk: int,
     ) -> int:

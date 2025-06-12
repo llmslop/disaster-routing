@@ -1,12 +1,12 @@
 from copy import deepcopy
 from typing import cast
-import networkx as nx
 from networkx.readwrite.json_graph import node_link_data, node_link_graph
+from .graphs import Graph, DiGraph
 
 
-def make_digraph(graph: nx.Graph) -> nx.DiGraph:
+def make_digraph(graph: Graph) -> DiGraph:
     """Converts an undirected NetworkX graph to a directed graph."""
-    digraph = nx.DiGraph()
+    digraph = DiGraph()
 
     # Copy nodes and their attributes
     digraph.add_nodes_from(graph.nodes(data=True))
@@ -23,11 +23,13 @@ class DisasterZone:
     nodes: set[int]
     edges: set[tuple[int, int]]
 
-    def __init__(self, nodes: set[int] = set(), edges: set[tuple[int, int]] = set()):
-        self.nodes = set(nodes)
-        self.edges = set(edges)
+    def __init__(
+        self, nodes: set[int] | None = None, edges: set[tuple[int, int]] | None = None
+    ):
+        self.nodes = set(nodes) if nodes is not None else set()
+        self.edges = set(edges) if edges is not None else set()
 
-    def affects_path(self, path: list[int], exclude_source=False):
+    def affects_path(self, path: list[int], exclude_source: bool = False):
         path_nodes = path if not exclude_source else path[1:]
         if any(node in self.nodes for node in path_nodes):
             return True
@@ -35,7 +37,7 @@ class DisasterZone:
         edges = ((path[i], path[i + 1]) for i in range(len(path) - 1))
         return any(edge in self.edges for edge in edges)
 
-    def remove_from_graph(self, g: nx.DiGraph):
+    def remove_from_graph(self, g: DiGraph):
         g.remove_nodes_from(self.nodes)
         g.remove_edges_from(self.edges)
 
@@ -54,10 +56,10 @@ class DisasterZone:
 
 
 class Topology:
-    graph: nx.DiGraph
+    graph: DiGraph
     dzs: list[DisasterZone]
 
-    def __init__(self, graph: nx.DiGraph, dzs: list[DisasterZone]):
+    def __init__(self, graph: DiGraph, dzs: list[DisasterZone]):
         self.graph = graph
         self.dzs = deepcopy(dzs)
 
@@ -72,7 +74,10 @@ class Topology:
         )
 
     def to_json(self) -> object:
-        return {
-            "graph": node_link_data(self.graph, edges="links"),
-            "dzs": [dz.to_json() for dz in self.dzs],
-        }
+        return cast(
+            object,
+            {
+                "graph": node_link_data(self.graph, edges="links"),
+                "dzs": [dz.to_json() for dz in self.dzs],
+            },
+        )

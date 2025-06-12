@@ -9,6 +9,9 @@ dependencies = [
     "matplotlib>=3.10.3",
     "networkx>=3.5",
     "numpy>=2.3.0",
+    "scipy>=1.15.3",
+    "scipy-stubs>=1.15.3.0",
+    "types-networkx>=3.5.0.20250610",
 ]
 
 [tool.pyright]

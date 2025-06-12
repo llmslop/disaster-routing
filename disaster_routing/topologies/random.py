@@ -1,8 +1,10 @@
 from math import sqrt
 from random import random
+from typing import cast
 import networkx as nx
 
-from .topology import DisasterZone, Topology
+from .topology import DisasterZone, Topology, make_digraph
+from .graphs import Graph
 
 
 def dist(p1: tuple[float, float], p2: tuple[float, float]):
@@ -10,8 +12,8 @@ def dist(p1: tuple[float, float], p2: tuple[float, float]):
     return sqrt(x**2 + y**2)
 
 
-def random_topology(n: int = 20, beta=0.4, alpha=0.5) -> Topology:
-    graph = nx.waxman_graph(n, beta, alpha)
+def random_topology(n: int = 20, beta: float = 0.4, alpha: float = 0.5) -> Topology:
+    graph = cast(Graph, nx.waxman_graph(n, beta, alpha))
     assert len(graph.nodes) == n
 
     for u, v in graph.edges:
@@ -19,7 +21,7 @@ def random_topology(n: int = 20, beta=0.4, alpha=0.5) -> Topology:
             dist(graph.nodes[u]["pos"], graph.nodes[v]["pos"]) * 1000.0
         )
 
-    pos = [graph.nodes[node]["pos"] for node in graph]
+    # pos = [graph.nodes[node]["pos"] for node in graph]
     rem_nodes = set(range(n))
     dzs: list[DisasterZone] = []
     while len(rem_nodes) > 0:
@@ -35,4 +37,4 @@ def random_topology(n: int = 20, beta=0.4, alpha=0.5) -> Topology:
 
 
 if __name__ == "__main__":
-    random_topology()
+    _ = random_topology()

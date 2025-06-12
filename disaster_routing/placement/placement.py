@@ -6,20 +6,23 @@ import networkx as nx
 from scipy.sparse import dok_matrix
 
 
-from ..topologies.topology import Topology
 from ..instances.request import Request
 from ..instances.instance import Instance
+from ..topologies.graphs import DiGraph
 
 
 def solve_dc_placement_single_request(
-    dcs: list[int], graph: nx.DiGraph, requests: list[Request]
+    dcs: list[int], graph: DiGraph, requests: list[Request]
 ) -> list[int]:
     total_lengths = {node: 0 for node in graph}
     for req in requests:
-        lengths: dict[int, int] = nx.single_source_dijkstra_path_length(
-            graph,
-            cast(str, cast(object, req.source)),
-            weight=None,
+        lengths = cast(
+            dict[int, int],
+            nx.single_source_dijkstra_path_length(
+                graph,
+                req.source,
+                weight=None,
+            ),
         )
         for node, length in lengths.items():
             total_lengths[node] += length
@@ -73,10 +76,14 @@ def solve_dc_placement_single_request(
         c[D * K + d] = dc_lengths[d]
 
     result = opt.milp(
-        c, integrality=np.ones(num_components), bounds=bounds, constraints=constraints
+        c,
+        integrality=np.ones(num_components, dtype=np.int8),
+        bounds=bounds,
+        constraints=constraints,
     )
 
     assert result.success, "Unable to find feasible content placement"
+    assert result.x is not None
     return [d for d in range(D) if result.x[d + D * K] == 1]
 
 

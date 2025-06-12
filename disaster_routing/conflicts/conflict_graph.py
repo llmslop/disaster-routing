@@ -1,8 +1,8 @@
 from math import ceil
 
 from ..routing.routing_algo import Route
-from ..instances.request import Request
 from ..instances.instance import Instance
+from ..topologies.graphs import Graph
 
 import networkx as nx
 
@@ -19,7 +19,7 @@ class RouteInfo:
 
 
 class ConflictGraph:
-    graph: nx.Graph
+    graph: Graph
     num_fses: list[int]
 
     def __init__(self, inst: Instance, routes: list[list[Route]]):

@@ -1,10 +1,11 @@
-import networkx as nx
 from .topology import DisasterZone, Topology
 from statistics import mean
 
+from .graphs import DiGraph
+
 
 def nsfnet(enable_cross_edges: bool = False) -> Topology:
-    graph = nx.DiGraph()
+    graph = DiGraph()
     graph.add_nodes_from(range(1, 15, 1))
     assert len(graph.nodes) == 14
 

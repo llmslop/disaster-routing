@@ -4,8 +4,6 @@ from math import ceil
 from random import choices, randint, random
 from typing import cast
 
-from hydra.core.config_store import ConfigStore
-
 from disaster_routing.topologies.topologies import get_topology
 
 from .instance import Instance

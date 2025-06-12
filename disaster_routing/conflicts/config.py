@@ -1,13 +1,5 @@
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import override
 from hydra.core.config_store import ConfigStore
-from omegaconf import MISSING
-
-from .ga import GADSASolver
-from .npm import NPMDSASolver
-from .conflict_graph import ConflictGraph
-from .solver import DSASolver
 
 
 @dataclass
@@ -32,7 +24,13 @@ class NPMDSASolverConfig(DSASolverConfig):
     num_sampled_points: int = 10
 
 
+@dataclass
+class FPGADSASolverConfig(DSASolverConfig):
+    _target_: str = "disaster_routing.conflicts.npm.FPGADSASolver"
+
+
 def register_dsa_solver_configs():
     cs = ConfigStore.instance()
     cs.store(group="dsa_solver", name="ga", node=GADSASolverConfig)
+    cs.store(group="dsa_solver", name="fpga", node=FPGADSASolverConfig)
     cs.store(group="dsa_solver", name="npm", node=NPMDSASolverConfig)

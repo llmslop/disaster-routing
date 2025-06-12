@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import override
 
 from .solver import DSASolver
@@ -30,7 +29,7 @@ class GADSASolver(DSASolver):
     def solve_for_odsa_perm(self) -> list[int]:
         best_perm, _ = permutation_genetic_algorithm(
             len(self.conflict_graph.graph),
-            self.calc_mofi_from_perm,
+            lambda x: self.calc_mofi_from_perm(list(x)),
             population_size=self.pop_size,
             generations=self.generations,
             mutation_rate=self.mutation_rate,

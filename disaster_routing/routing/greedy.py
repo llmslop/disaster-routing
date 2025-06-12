@@ -24,15 +24,15 @@ class GreedyRoutingAlgorithm(RoutingAlgorithm):
         best_route_set_cost = np.inf
 
         for K in range(len(dst)):
-            result: tuple[dict[int, int], dict[int, list[int]]] = (
+            distances, paths = cast(
+                tuple[dict[int, int], dict[int, list[int]]],
                 nx.single_source_dijkstra(
                     graph,
-                    cast_node_type(req.source),
+                    req.source,
                     weight=None,
-                )
+                ),
             )
 
-            distances, paths = result
             nearest_node: int | None = min(
                 dst,
                 key=lambda dst_node: distances.get(dst_node, np.inf),
@@ -58,7 +58,7 @@ class GreedyRoutingAlgorithm(RoutingAlgorithm):
             routes.append(Route(top, path, format))
 
             if len(routes) >= 2:
-                cost = self.route_set_cost(top, routes, req.bpsk_fs_count)
+                cost = self.route_set_cost(routes, req.bpsk_fs_count)
                 if cost < best_route_set_cost:
                     best_route_set = list(routes)
                     best_route_set_cost = cost
@@ -68,7 +68,6 @@ class GreedyRoutingAlgorithm(RoutingAlgorithm):
 
     def route_set_cost(
         self,
-        top: Topology,
         routes: list[Route],
         total_fs_bpsk: int,
     ) -> int:

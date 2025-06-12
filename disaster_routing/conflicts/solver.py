@@ -1,11 +1,6 @@
 from abc import ABC, abstractmethod
 
-import networkx as nx
-
 from .conflict_graph import ConflictGraph
-from .check import check_dsa
-from .odsa import solve_odsa
-from .mofi import calc_mofi
 
 
 class DSASolver(ABC):
@@ -15,13 +10,35 @@ class DSASolver(ABC):
         self.conflict_graph = conflict_graph
 
     def solve_odsa(self, perm: list[int]) -> list[int]:
-        return solve_odsa(self.conflict_graph.graph, perm, self.conflict_graph.num_fses)
+        result = [0 for _ in perm]
+        for i, node in enumerate(perm):
+            start = max(
+                (
+                    result[prev] + self.conflict_graph.num_fses[prev]
+                    for prev in perm[:i]
+                    if self.conflict_graph.graph.has_edge(node, prev)
+                ),
+                default=0,
+            )
+            if len(result) > 0:
+                start = max(start, result[-1])
+            result[node] = start
+
+        # check_dsa(graph, num_fses, result)
+        return result
 
     def check(self, sol: list[int]):
-        check_dsa(self.conflict_graph.graph, self.conflict_graph.num_fses, sol)
+        graph = self.conflict_graph.graph
+        num_fses = self.conflict_graph.num_fses
+        for i in range(len(graph)):
+            for j in range(i + 1, len(graph)):
+                ii = set(range(sol[i], sol[i] + num_fses[i]))
+                ji = set(range(sol[j], sol[j] + num_fses[j]))
+                if graph.has_edge(i, j):
+                    assert len(ii.intersection(ji)) == 0
 
     def calc_mofi(self, sol: list[int]) -> int:
-        return calc_mofi(self.conflict_graph.num_fses, sol)
+        return max(a + b for a, b in zip(sol, self.conflict_graph.num_fses))
 
     def calc_mofi_from_perm(self, perm: list[int]) -> int:
         return self.calc_mofi(self.solve_odsa(perm))

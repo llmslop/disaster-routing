@@ -41,7 +41,7 @@ def permutation_genetic_algorithm(
     # Initial population
     population = [random_perm() for _ in range(population_size)]
 
-    for gen in range(generations):
+    for _ in range(generations):
         population.sort(key=lambda x: objective(tuple(x)))
         _ = record.update(tuple(population[0]))
 
