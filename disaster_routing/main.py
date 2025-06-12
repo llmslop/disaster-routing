@@ -75,7 +75,6 @@ def my_main(cfg: MainConfig):
         log.debug(f"Using {cfg.router} router, {cfg.dsa_solver} DSA solver")
         router = cast(RoutingAlgorithm, instantiate(cfg.router))
         all_routes = router.route_instance(instance, content_placement)
-        print(all_routes)
         conflict_graph = ConflictGraph(instance, all_routes)
         dsa_solver = cast(DSASolver, instantiate(cfg.dsa_solver, conflict_graph))
         _, mofi = dsa_solver.solve()
