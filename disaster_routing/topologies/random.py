@@ -1,9 +1,8 @@
 from math import sqrt
 from random import random
 import networkx as nx
-from statistics import mean
 
-from .topology import DisasterZone, Topology, make_digraph
+from .topology import DisasterZone, Topology
 
 
 def dist(p1: tuple[float, float], p2: tuple[float, float]):
