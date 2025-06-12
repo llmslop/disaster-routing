@@ -56,7 +56,7 @@ class InstanceGenerator:
 class InstanceGeneratorConfig:
     num_requests: int = 10
     topology_name: str = "nsfnet"
-    output_path: str = "instances/temp_instance.json"
+    path: str = "instances/temp_instance.json"
     force_recreate: bool = False
 
 
@@ -64,13 +64,13 @@ def load_or_gen_instance(config: InstanceGeneratorConfig) -> Instance:
     try:
         if config.force_recreate:
             raise IOError()
-        with open(config.output_path, "rb") as f:
+        with open(config.path, "rb") as f:
             obj = cast(dict[str, object], json.load(f))
             return Instance.from_json(obj)
     except IOError:
         generator = InstanceGenerator(get_topology(config.topology_name))
         instance = generator.gen_instance(config.num_requests)
-        with open(config.output_path, "w") as f:
+        with open(config.path, "w") as f:
             obj = instance.to_json()
             json.dump(obj, f)
         return instance
