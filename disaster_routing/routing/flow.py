@@ -31,10 +31,6 @@ def remove_consecutive_duplicates[T](seq: list[T]) -> list[T]:
     return result
 
 
-def cast_node_type(node: int) -> str:
-    return cast(str, cast(object, node))
-
-
 def extract_all_flow_paths(
     G: StrDiGraph,
     source: str,

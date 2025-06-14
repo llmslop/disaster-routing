@@ -9,10 +9,6 @@ from ..instances.request import Request
 from ..topologies.topology import Topology
 
 
-def cast_node_type(node: int) -> str:
-    return cast(str, cast(object, node))
-
-
 class GreedyRoutingAlgorithm(RoutingAlgorithm):
     @override
     def route_request(self, req: Request, top: Topology, dst: list[int]) -> list[Route]:
