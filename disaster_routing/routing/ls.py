@@ -81,8 +81,6 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
                     edges_with_mofi.discard(edge)
                     edges_with_mofi.update(ls_edges_with_mofi)
                     break
-            if change:
-                print("ABC")
             if not change:
                 break
 
