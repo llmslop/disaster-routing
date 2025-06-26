@@ -1,5 +1,4 @@
-from abc import ABCMeta, abstractmethod
-from typing import Any, Callable, Protocol, TypeVar
+from typing import Callable
 
 
 class BestRecord[T, V]:
