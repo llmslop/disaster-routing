@@ -63,6 +63,9 @@ class Topology:
         self.graph = graph
         self.dzs = deepcopy(dzs)
 
+    def copy(self) -> "Topology":
+        return Topology(self.graph.copy(), deepcopy(self.dzs))
+
     @staticmethod
     def from_json(data: dict[str, object]) -> "Topology":
         return Topology(

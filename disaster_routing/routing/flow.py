@@ -3,7 +3,7 @@ from typing import cast, override
 import networkx as nx
 import numpy as np
 
-from .routing_algo import RoutingAlgorithm, Route
+from .routing_algo import InfeasibleRouteError, RoutingAlgorithm, Route
 from ..instances.request import Request
 from ..topologies.topology import Topology
 from ..topologies.graphs import Graph, StrDiGraph
@@ -176,7 +176,8 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
             except AssertionError:
                 pass
 
-        assert best_route_set is not None
+        if best_route_set is None:
+            raise InfeasibleRouteError()
         return best_route_set
 
     def route_set_cost(

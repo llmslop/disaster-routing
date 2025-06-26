@@ -9,4 +9,4 @@ Current issues:
 Planned features:
 
 - [ ] EA-based routing process
-- [ ] "Local-searchy" operation after the heuristic
+- [x] "Local-searchy" operation after the heuristic

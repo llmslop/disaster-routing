@@ -3,7 +3,7 @@ from typing import cast, override
 import networkx as nx
 import numpy as np
 
-from .routing_algo import RoutingAlgorithm, Route
+from .routing_algo import InfeasibleRouteError, RoutingAlgorithm, Route
 from ..instances.modulation import ModulationFormat
 from ..instances.request import Request
 from ..topologies.topology import Topology
@@ -59,7 +59,8 @@ class GreedyRoutingAlgorithm(RoutingAlgorithm):
                     best_route_set = list(routes)
                     best_route_set_cost = cost
 
-        assert best_route_set is not None
+        if best_route_set is None:
+            raise InfeasibleRouteError()
         return best_route_set
 
     def route_set_cost(
