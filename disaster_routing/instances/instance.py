@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import cast
 from ..topologies.topology import Topology
 from .request import Request
@@ -10,6 +11,9 @@ class Instance:
     def __init__(self, topology: Topology, requests: list[Request]):
         self.topology = topology
         self.requests = requests
+
+    def copy(self) -> "Instance":
+        return Instance(self.topology.copy(), deepcopy(self.requests))
 
     @staticmethod
     def from_json(json: dict[str, object]) -> "Instance":
