@@ -8,6 +8,11 @@ from ..instances.request import Request
 from ..topologies.topology import Topology
 
 
+class InfeasibleRouteError(Exception):
+    def __init__(self):
+        super().__init__("No route found via routing algorithm")
+
+
 class Route:
     top: Topology
     node_list: list[int]

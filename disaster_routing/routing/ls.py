@@ -3,7 +3,7 @@ from typing import cast, override
 
 from hydra.utils import instantiate
 
-from .routing_algo import RoutingAlgorithm, Route
+from .routing_algo import InfeasibleRouteError, RoutingAlgorithm, Route
 from ..instances.request import Request
 from ..instances.instance import Instance
 from ..topologies.topology import Topology
@@ -73,14 +73,17 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
             change = False
             for edge in edges_with_mofi:
                 ls_inst = MofiLSRoutingAlgorithm.remove_edge_from_instance(inst, edge)
-                ls_routes, ls_edges_with_mofi, ls_mofi = (
-                    self.route_instance_single_pass(ls_inst, content_placement)
-                )
-                if ls_mofi < mofi:
-                    routes = ls_routes
-                    edges_with_mofi.discard(edge)
-                    edges_with_mofi.update(ls_edges_with_mofi)
-                    break
+                try:
+                    ls_routes, ls_edges_with_mofi, ls_mofi = (
+                        self.route_instance_single_pass(ls_inst, content_placement)
+                    )
+                    if ls_mofi < mofi:
+                        routes = ls_routes
+                        edges_with_mofi.discard(edge)
+                        edges_with_mofi.update(ls_edges_with_mofi)
+                        break
+                except InfeasibleRouteError:
+                    pass
             if not change:
                 break
 
