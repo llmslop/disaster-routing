@@ -5,7 +5,7 @@ from typing import Any, cast
 import hydra
 from hydra.utils import instantiate
 from hydra.core.config_store import ConfigStore
-from omegaconf import MISSING, OmegaConf
+from omegaconf import MISSING
 
 from disaster_routing.utils.structlog import SL
 
