@@ -5,7 +5,9 @@ from typing import Any, cast
 import hydra
 from hydra.utils import instantiate
 from hydra.core.config_store import ConfigStore
-from omegaconf import MISSING
+from omegaconf import MISSING, OmegaConf
+
+from disaster_routing.utils.structlog import SL
 
 from .instances.generate import (
     InstanceGeneratorConfig,
@@ -58,17 +60,16 @@ def my_main(cfg: MainConfig):
         ]
         for content in contents
     }
-    log.debug(f"Content placement: {content_placement}")
+    log.debug(SL("Content placement", placement=content_placement))
 
     if cfg.router is not None:
-        log.debug(f"Using {cfg.router} router, {cfg.dsa_solver} DSA solver")
         router = cast(RoutingAlgorithm, instantiate(cfg.router))
         all_routes = router.route_instance(instance, content_placement)
         conflict_graph = ConflictGraph(instance, all_routes)
         dsa_solver = cast(DSASolver, instantiate(cfg.dsa_solver, conflict_graph))
         _, mofi = dsa_solver.solve()
 
-        log.info(f"Final solution: {conflict_graph.total_fs()} FS, MOFI {mofi}")
+        log.info(SL("Final solution", total_fs=conflict_graph.total_fs(), mofi=mofi))
 
 
 if __name__ == "__main__":
