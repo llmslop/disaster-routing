@@ -81,6 +81,7 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
                         routes = ls_routes
                         edges_with_mofi.discard(edge)
                         edges_with_mofi.update(ls_edges_with_mofi)
+                        change = True
                         break
                 except InfeasibleRouteError:
                     pass
