@@ -18,3 +18,9 @@ dependencies = [
 typeCheckingMode = "recommended"
 reportAny = "none"
 reportExplicitAny = "none"
+
+[dependency-groups]
+dev = [
+    "fs>=2.4.16",
+    "pyyaml>=6.0.2",
+]
