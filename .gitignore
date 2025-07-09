@@ -1,4 +1,14 @@
+# python-specific files
 __pycache__
 *.pkl
+
+# log files
 *.log
+*.log.zip
+
+# data files from output processing
 *.yaml
+*.csv
+# data files intentionally not ignored
+!*.data.yaml
+!*.data.csv
