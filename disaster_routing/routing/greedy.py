@@ -10,6 +10,9 @@ from ..topologies.topology import Topology
 
 
 class GreedyRoutingAlgorithm(RoutingAlgorithm):
+    def __init__(self, *_: object, **__: object) -> None:
+        pass
+
     @override
     def route_request(self, req: Request, top: Topology, dst: list[int]) -> list[Route]:
         assert len(dst) >= 2

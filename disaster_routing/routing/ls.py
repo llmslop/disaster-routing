@@ -92,10 +92,10 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
 
 
 class GreedyLSRoutingAlgorithm(MofiLSRoutingAlgorithm):
-    def __init__(self) -> None:
+    def __init__(self, *_: object, **__: object) -> None:
         super().__init__(GreedyRoutingAlgorithm(), NPMDSASolverConfig())
 
 
 class FlowLSRoutingAlgorithm(MofiLSRoutingAlgorithm):
-    def __init__(self) -> None:
+    def __init__(self, *_: object, **__: object) -> None:
         super().__init__(FlowRoutingAlgorithm(), NPMDSASolverConfig())
