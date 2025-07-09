@@ -24,7 +24,6 @@ class DSASolver(ABC):
                 start = max(start, result[-1])
             result[node] = start
 
-        # check_dsa(graph, num_fses, result)
         return result
 
     def check(self, sol: list[int]):

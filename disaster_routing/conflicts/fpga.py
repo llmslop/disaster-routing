@@ -34,7 +34,6 @@ class FPGADSASolver(DSASolver):
             remaining.remove(node)
             ordering.append(node)
 
-        self.check(start_indices)
         return ordering
 
     @override

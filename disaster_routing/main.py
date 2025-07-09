@@ -36,6 +36,7 @@ class MainConfig:
     router: RoutingAlgorithmConfig | None = None
     dsa_solver: DSASolverConfig = MISSING
     instance: InstanceGeneratorConfig = field(default_factory=InstanceGeneratorConfig)
+    safety_checks: bool = True
 
 
 cs = ConfigStore.instance()
@@ -65,9 +66,15 @@ def my_main(cfg: MainConfig):
     if cfg.router is not None:
         router = cast(RoutingAlgorithm, instantiate(cfg.router))
         all_routes = router.route_instance(instance, content_placement)
+        if cfg.safety_checks:
+            for routes, req in zip(all_routes, instance.requests):
+                router.check_solution(req, content_placement[req.content_id], routes)
+
         conflict_graph = ConflictGraph(instance, all_routes)
         dsa_solver = cast(DSASolver, instantiate(cfg.dsa_solver, conflict_graph))
-        _, mofi = dsa_solver.solve()
+        start_indices, mofi = dsa_solver.solve()
+        if cfg.safety_checks:
+            dsa_solver.check(start_indices)
 
         log.info(SL("Final solution", total_fs=conflict_graph.total_fs(), mofi=mofi))
 

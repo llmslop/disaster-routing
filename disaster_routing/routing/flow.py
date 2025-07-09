@@ -165,7 +165,6 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                     if len(path) == 0:
                         break
                     routes.append(Route(top, path))
-                    self.check_solution(req, dst, routes)
                 if len(routes) >= 2:
                     cost = self.route_set_cost(routes, req.bpsk_fs_count)
                     if cost < best_route_set_cost:
