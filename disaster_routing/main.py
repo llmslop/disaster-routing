@@ -47,7 +47,7 @@ register_routing_algo_configs()
 log = logging.getLogger(__name__)
 
 
-@hydra.main(version_base=None, config_name="config")
+@hydra.main(version_base=None, config_path="conf", config_name="default")
 def my_main(cfg: MainConfig):
     instance = load_or_gen_instance(cfg.instance)
     # dc_placement = solve_dc_placement(instance, dc_positions)
