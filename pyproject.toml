@@ -23,5 +23,9 @@ reportExplicitAny = "none"
 [dependency-groups]
 dev = [
     "fs>=2.4.16",
+    "jq>=1.9.1",
+    "pandas>=2.3.1",
+    "pandas-stubs>=2.3.0.250703",
     "pyyaml>=6.0.2",
+    "xlsxwriter>=3.2.5",
 ]
