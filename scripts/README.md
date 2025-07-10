@@ -4,15 +4,15 @@ These scripts are mainly designed for Unix/Linux platforms, so it is not cross
 platform. Here is an overview of what these scripts are for.
 
 The philosophy of these data processing scripts is **avoid saving intermediate
-to disk**. The main way to avoid such hassle is by piping, but there are cases
-when temporaries is unavoidable (e.g. Excel spreadsheets). In these cases,
+data to disk**. The main way to avoid such hassle is by piping, but there are
+cases when temporaries is unavoidable (e.g. Excel spreadsheets). In these cases,
 `open_temp.sh` can be used.
 
 TL;DR here is the current primary usage of these scripts:
 
 ```sh
 scripts/collect_logs.py zip://output.log.zip    \
-    | scripts/process_results                   \
+    | scripts/process_results.py                \
     | scripts/open_temp.sh .xlsx
 ```
 
@@ -35,7 +35,7 @@ piped to this script, it creates a temporary file via `mktemp`, and use the
 
 ## `collect_logs.py`
 
-This script collect log from a virtual file system (a directory, a ZIP file,
+This script collect log from a virtual filesystem (a directory, a ZIP file,
 or anything really):
 
 ```sh
