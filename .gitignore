@@ -5,10 +5,17 @@ __pycache__
 # log files
 *.log
 *.log.zip
+/multirun
 
-# data files from output processing
-*.yaml
+# user config files
+*.user.yaml
+
+# result data files
 *.csv
+*.xls
+*.xlsx
+*.ods
+
 # data files intentionally not ignored
 !*.data.yaml
 !*.data.csv
