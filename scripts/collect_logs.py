@@ -12,11 +12,11 @@ fs = open_fs(sys.argv[1])
 sys.stdout.write("[")
 first = True
 for date in fs.listdir("."):
+    if date == "results":
+        continue
     for time in fs.listdir(date):
         group = f"{date}T{time}"
         for run in fs.listdir(date + sep + time):
-            if run == "results":
-                continue
             dir = date + sep + time + sep + run
             if fs.isdir(dir):
                 try:
