@@ -18,7 +18,7 @@ class WeightedSumEvaluator(Evaluator):
             total_fs_weight if not isnan(total_fs_weight) else (1.0 - mofi_weight)
         )
         self.mofi_weight = (
-            mofi_weight if not isnan(total_fs_weight) else (1.0 - total_fs_weight)
+            mofi_weight if not isnan(mofi_weight) else (1.0 - total_fs_weight)
         )
 
     @override
