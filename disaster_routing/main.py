@@ -66,7 +66,7 @@ def my_main(cfg: MainConfig):
         ]
         for content in contents
     }
-    log.debug(SL("Content placement", placement=content_placement))
+    log.info(SL("Content placement", placement=content_placement))
 
     if cfg.router is not None:
         router = cast(RoutingAlgorithm, instantiate(cfg.router, evaluator=evaluator))
@@ -74,12 +74,28 @@ def my_main(cfg: MainConfig):
         if cfg.safety_checks:
             for routes, req in zip(all_routes, instance.requests):
                 router.check_solution(req, content_placement[req.content_id], routes)
+        log.info(
+            SL(
+                "Routing results",
+                route_nodes=[[r.node_list for r in routes] for routes in all_routes],
+                route_formats=[
+                    [r.format.name for r in routes] for routes in all_routes
+                ],
+            )
+        )
 
         conflict_graph = ConflictGraph(instance, all_routes)
         dsa_solver = cast(DSASolver, instantiate(cfg.dsa_solver, conflict_graph))
         start_indices, mofi = dsa_solver.solve()
         if cfg.safety_checks:
             dsa_solver.check(start_indices)
+        log.info(
+            SL(
+                "DSA results",
+                start_indices=start_indices,
+                num_fses=conflict_graph.num_fses,
+            )
+        )
 
         log.info(
             SL(
