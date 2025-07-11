@@ -81,7 +81,14 @@ def my_main(cfg: MainConfig):
         if cfg.safety_checks:
             dsa_solver.check(start_indices)
 
-        log.info(SL("Final solution", total_fs=conflict_graph.total_fs(), mofi=mofi))
+        log.info(
+            SL(
+                "Final solution",
+                total_fs=conflict_graph.total_fs(),
+                mofi=mofi,
+                score=evaluator.evaluate(conflict_graph.total_fs(), mofi),
+            )
+        )
 
 
 if __name__ == "__main__":
