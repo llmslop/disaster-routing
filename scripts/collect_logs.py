@@ -15,6 +15,8 @@ for date in fs.listdir("."):
     for time in fs.listdir(date):
         group = f"{date}T{time}"
         for run in fs.listdir(date + sep + time):
+            if run == "results":
+                continue
             dir = date + sep + time + sep + run
             if fs.isdir(dir):
                 try:

@@ -20,6 +20,9 @@ jobs:
       - name: Run algorithm on test instances
         run: scripts/run_all.sh
 
+      - name: Process results
+        run: scripts/collect_logs.py multirun | scripts/process_results.py > multirun/results/processed.xlsx
+
       - name: Upload output as artifact
         uses: actions/upload-artifact@v4
         with:
