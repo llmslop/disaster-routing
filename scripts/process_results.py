@@ -6,24 +6,42 @@ import sys
 import jq
 
 
+def is_float(cell: str | float) -> bool:
+    try:
+        _ = float(cell)
+        return True
+    except ValueError:
+        return False
+
+
+def cell_length(cell: object) -> int:
+    if cell is None:
+        return 0
+    elif isinstance(cell, tuple):
+        return max(cell_length(e) for e in cell)
+    elif (isinstance(cell, str) or isinstance(cell, float)) and is_float(cell):
+        return len(f"{float(cell):.2f}")
+    else:
+        return len(str(cell))
+
+
+def add_space(len: float) -> float:
+    return max(10, min(len + 5, len * 1.1))
+
+
 def dump_excel(
     df: pd.DataFrame, writer: pd.ExcelWriter, sheet_name: str, index: bool = False
 ):
     df.to_excel(writer, sheet_name=sheet_name, index=index)
     start_loc = 0
     if index:
-        column_length = max(len(str(c)) for c in df.index)
-        if isinstance(df.index.name, str):
-            column_length = max(column_length, len(df.index.name))
+        column_length = max(df.index.map(cell_length).max(), cell_length(df.index.name))
+        column_length = add_space(column_length)
         writer.sheets[sheet_name].set_column(start_loc, start_loc, column_length)
         start_loc += 1
     for i, column in enumerate(df):
-        column_length = df[column].astype(str).map(len).max()
-        if isinstance(column, tuple):
-            column_length = max(column_length, max(len(c) for c in column))
-        else:
-            column_length = max(column_length, len(str(column)))
-        # add some more space
+        column_length = max(df[column].map(cell_length).max(), cell_length(column))
+        column_length = add_space(column_length)
         column_length = max(10, min(column_length + 5, column_length * 1.1))
         writer.sheets[sheet_name].set_column(
             start_loc + i, start_loc + i, column_length
@@ -49,7 +67,14 @@ def pivot_results(input: IO[str], output: IO[bytes]):
         )
         df = pd.DataFrame.from_dict(results)
         dump_excel(df, out, "raw")
-        df = df.pivot_table(["mofi", "total_fs", "score"], "instance", "router")
+        df = df.pivot_table(
+            ["mofi", "total_fs", "score"],
+            "instance",
+            "router",
+            sort=False,
+            margins_name="Avg.",
+            margins=True,
+        )
         dump_excel(df, out, "pivot", index=True)
 
 
