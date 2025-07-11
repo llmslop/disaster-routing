@@ -1,0 +1,24 @@
+version: 1
+formatters:
+  # ci-friendly format
+  simple:
+    format: '[%(levelname)s] - %(message)s'
+  # hydra default logging format (as of july 2025)
+  full:
+    format: '[%(asctime)s][%(name)s][%(levelname)s] - %(message)s'
+handlers:
+  console:
+    level: INFO
+    class: logging.StreamHandler
+    formatter: simple
+    stream: ext://sys.stdout
+  file:
+    level: DEBUG
+    class: logging.FileHandler
+    formatter: full
+    # absolute file path
+    filename: ${hydra.runtime.output_dir}/${hydra.job.name}.log
+root:
+  level: DEBUG
+  handlers: [console, file]
+disable_existing_loggers: false
