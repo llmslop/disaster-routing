@@ -18,7 +18,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Run algorithm on test instances
-        run: scripts/run_all.sh
+        run: scripts/run_all.sh ".json$"
 
       - name: Process results
         run: mkdir multirun/results && uv run scripts/collect_logs.py multirun | uv run scripts/process_results.py > multirun/results/processed.xlsx
