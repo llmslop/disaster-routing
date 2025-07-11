@@ -40,6 +40,7 @@ def pivot_results(input: IO[str], output: IO[bytes]):
                   instance: .config.instance.path,
                   mofi: first(.run_log[] | select(.msg="Final solution") | .args.mofi),
                   total_fs: first(.run_log[] | select(.msg="Final solution") | .args.total_fs),
+                  score: first(.run_log[] | select(.msg="Final solution") | .args.score),
                 }
                 """
             )
@@ -48,7 +49,7 @@ def pivot_results(input: IO[str], output: IO[bytes]):
         )
         df = pd.DataFrame.from_dict(results)
         dump_excel(df, out, "raw")
-        df = df.pivot_table(["mofi", "total_fs"], "instance", "router")
+        df = df.pivot_table(["mofi", "total_fs", "score"], "instance", "router")
         dump_excel(df, out, "pivot", index=True)
 
 
