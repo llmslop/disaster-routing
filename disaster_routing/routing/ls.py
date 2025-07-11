@@ -101,10 +101,14 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
 
 
 class GreedyLSRoutingAlgorithm(MofiLSRoutingAlgorithm):
-    def __init__(self, evaluator: Evaluator, **_: object) -> None:
-        super().__init__(GreedyRoutingAlgorithm(), evaluator, NPMDSASolverConfig())
+    def __init__(
+        self, evaluator: Evaluator, dsa_solver: DSASolverConfig, **_: object
+    ) -> None:
+        super().__init__(GreedyRoutingAlgorithm(), evaluator, dsa_solver)
 
 
 class FlowLSRoutingAlgorithm(MofiLSRoutingAlgorithm):
-    def __init__(self, evaluator: Evaluator, **_: object) -> None:
-        super().__init__(FlowRoutingAlgorithm(), evaluator, NPMDSASolverConfig())
+    def __init__(
+        self, evaluator: Evaluator, dsa_solver: DSASolverConfig, **_: object
+    ) -> None:
+        super().__init__(FlowRoutingAlgorithm(), evaluator, dsa_solver)

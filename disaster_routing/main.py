@@ -69,7 +69,10 @@ def my_main(cfg: MainConfig):
     log.debug(SL("Content placement", placement=content_placement))
 
     if cfg.router is not None:
-        router = cast(RoutingAlgorithm, instantiate(cfg.router, evaluator=evaluator))
+        router = cast(
+            RoutingAlgorithm,
+            instantiate(cfg.router, evaluator=evaluator, dsa_solver=cfg.dsa_solver),
+        )
         all_routes = router.route_instance(instance, content_placement)
         if cfg.safety_checks:
             for routes, req in zip(all_routes, instance.requests):
