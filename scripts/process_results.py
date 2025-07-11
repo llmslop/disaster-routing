@@ -68,10 +68,9 @@ def pivot_results(input: IO[str], output: IO[bytes]):
         df = pd.DataFrame.from_dict(results)
         dump_excel(df, out, "raw")
         df = df.pivot_table(
-            ["mofi", "total_fs", "score"],
-            "instance",
-            "router",
-            sort=False,
+            values=["mofi", "total_fs", "score"],
+            index="instance",
+            columns="router",
             margins_name="Avg.",
             margins=True,
         )
