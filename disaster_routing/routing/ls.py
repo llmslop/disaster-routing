@@ -47,6 +47,7 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
         inst = inst.copy()
         u, v = edge
         inst.topology.graph.remove_edge(u, v)
+        inst.topology.graph.remove_edge(v, u)
         return inst
 
     def route_instance_single_pass(
@@ -74,22 +75,21 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
         routes, edges_with_mofi, total_fs, mofi = self.route_instance_single_pass(
             inst, content_placement
         )
+
+        best = self.evaluator.evaluate(total_fs, mofi)
         for iter in range(self.f_max):
             change = False
             for edge in edges_with_mofi:
                 ls_inst = MofiLSRoutingAlgorithm.remove_edge_from_instance(inst, edge)
                 try:
-                    ls_routes, ls_edges_with_mofi, ls_total_fs, ls_mofi = (
+                    ls_routes, ls_edges_with_mofi, total_fs, mofi = (
                         self.route_instance_single_pass(ls_inst, content_placement)
                     )
-                    if self.evaluator.evaluate(
-                        ls_total_fs, ls_mofi
-                    ) < self.evaluator.evaluate(total_fs, mofi):
+                    if self.evaluator.evaluate(total_fs, mofi) < best:
                         edges_with_mofi.discard(edge)
                         edges_with_mofi.update(ls_edges_with_mofi)
                         routes = ls_routes
-                        total_fs = total_fs
-                        mofi = ls_mofi
+                        best = self.evaluator.evaluate(total_fs, mofi)
                         change = True
                         break
                 except InfeasibleRouteError:
