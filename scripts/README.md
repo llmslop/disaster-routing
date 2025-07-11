@@ -8,9 +8,19 @@ data to disk**. The main way to avoid such hassle is by piping, but there are
 cases when temporaries is unavoidable (e.g. Excel spreadsheets). In these cases,
 `open_temp.sh` can be used.
 
+Python scripts can be run in two ways:
+
+- Via `uv`: this handles dev-dependencies automatically, but you'll have to type
+  `uv run` manually, which could bloat the command.
+- Via shebang: this will run the default `python3` executor, which might not
+  have the necessary dependencies. You will have to either: activate the uv
+  virtualenv via `source .venv/bin/activate`, or make sure that you have all
+  necessary dev dependencies installed.
+
 TL;DR here is the current primary usage of these scripts:
 
 ```sh
+source .venv/bin/activate # these scripts needs uv dev dependencies
 scripts/collect_logs.py zip://output.log.zip    \
     | scripts/process_results.py                \
     | scripts/open_temp.sh .xlsx
