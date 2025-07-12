@@ -6,6 +6,7 @@ __pycache__
 *.log
 *.log.zip
 /multirun
+/outputs
 
 # user config files
 *.user.yaml
