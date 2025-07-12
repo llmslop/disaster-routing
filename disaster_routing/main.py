@@ -31,7 +31,7 @@ class MainConfig:
     defaults: list[Any] = field(
         default_factory=lambda: [
             "_self_",
-            {"dsa_solver": "ga"},
+            {"dsa_solver": "fpga"},
             {"eval": "weightedsum"},
         ]
     )
