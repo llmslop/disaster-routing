@@ -305,7 +305,7 @@ class SGA:
 
     def best(self, collection: list[Individual] | None = None) -> Individual:
         collection = collection if collection is not None else self.population
-        return max(collection, key=lambda ind: ind.fitness(self.evaluator))
+        return min(collection, key=lambda ind: ind.fitness(self.evaluator))
 
 
 class SGARoutingAlgorithm(RoutingAlgorithm):
