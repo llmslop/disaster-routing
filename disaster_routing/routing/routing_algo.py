@@ -47,6 +47,10 @@ class Route:
     def __repr__(self) -> str:
         return str(self.node_list)
 
+    # only copies the node_list
+    def shallow_copy(self) -> "Route":
+        return Route(self.top, self.node_list.copy(), self.format)
+
 
 class RoutingAlgorithm(ABC):
     @abstractmethod

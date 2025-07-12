@@ -1,3 +1,6 @@
+from typing import override
+
+
 class ModulationFormat:
     name: str
     rate: float
@@ -43,3 +46,7 @@ class ModulationFormat:
             key=lambda format: format.rate,
             default=None,
         )
+
+    @override
+    def __repr__(self) -> str:
+        return self.name

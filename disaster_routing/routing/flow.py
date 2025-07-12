@@ -73,6 +73,7 @@ def extract_all_flow_paths(
     return paths
 
 
+# TODO: add available out nodes constraint
 def reconstruct_min_hop_path(G: Graph, group_path: list[set[int]]) -> list[int]:
     # group_path: list of sets of nodes (G1, G2, ..., Gk)
     # Returns: (min_path, hop_count)

@@ -5,7 +5,7 @@ from typing import Any, cast
 import hydra
 from hydra.utils import instantiate
 from hydra.core.config_store import ConfigStore
-from omegaconf import MISSING
+from omegaconf import MISSING, OmegaConf
 
 from .instances.generate import (
     InstanceGeneratorConfig,
@@ -42,6 +42,10 @@ class MainConfig:
     safety_checks: bool = True
 
 
+OmegaConf.register_new_resolver(
+    "if", lambda cond, if_true, if_false: if_true if cond else if_false
+)
+
 cs = ConfigStore.instance()
 cs.store(name="config", node=MainConfig)
 register_evaluator_configs()
@@ -71,7 +75,12 @@ def my_main(cfg: MainConfig):
     if cfg.router is not None:
         router = cast(
             RoutingAlgorithm,
-            instantiate(cfg.router, evaluator=evaluator, dsa_solver=cfg.dsa_solver),
+            instantiate(
+                cfg.router,
+                evaluator=evaluator,
+                dsa_solver=cfg.dsa_solver,
+                _recursive_=False,
+            ),
         )
         all_routes = router.route_instance(instance, content_placement)
         if cfg.safety_checks:
