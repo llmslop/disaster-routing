@@ -1,6 +1,6 @@
 from typing import override
 
-from disaster_routing.conflicts.solver import DSASolver
+from .solver import DSASolver
 
 
 class FPGADSASolver(DSASolver):

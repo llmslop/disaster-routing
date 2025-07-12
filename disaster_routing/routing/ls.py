@@ -3,15 +3,14 @@ from typing import cast, override
 
 from hydra.utils import instantiate
 
-from disaster_routing.eval.evaluator import Evaluator
-
 from .routing_algo import InfeasibleRouteError, RoutingAlgorithm, Route
 from ..instances.request import Request
 from ..instances.instance import Instance
 from ..topologies.topology import Topology
-from ..conflicts.config import DSASolverConfig, NPMDSASolverConfig
+from ..conflicts.config import DSASolverConfig
 from ..conflicts.conflict_graph import ConflictGraph
 from ..conflicts.solver import DSASolver
+from ..eval.evaluator import Evaluator
 from .greedy import GreedyRoutingAlgorithm
 from .flow import FlowRoutingAlgorithm
 

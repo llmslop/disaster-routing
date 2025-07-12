@@ -4,11 +4,10 @@ from math import ceil
 from random import choices, randint, random
 from typing import cast
 
-from disaster_routing.topologies.topologies import get_topology
-
 from .instance import Instance
 from ..instances.request import Request
 from ..topologies.topology import Topology
+from ..topologies.topologies import get_topology
 
 
 class InstanceGenerator:

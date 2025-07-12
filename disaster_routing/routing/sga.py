@@ -6,12 +6,9 @@ from typing import Callable, cast, override
 
 from hydra.utils import instantiate
 
-from disaster_routing.conflicts.conflict_graph import ConflictGraph
-from disaster_routing.conflicts.solver import DSASolver
-from disaster_routing.routing.flow import reconstruct_min_hop_path
-from disaster_routing.routing.greedy import GreedyRoutingAlgorithm
-
 from ..conflicts.config import DSASolverConfig
+from ..conflicts.conflict_graph import ConflictGraph
+from ..conflicts.solver import DSASolver
 from ..eval.evaluator import Evaluator
 from ..instances.instance import Instance
 from ..instances.request import Request
@@ -20,6 +17,8 @@ from ..utils.welford import RunningStats
 from ..utils.structlog import SL
 from .routing_algo import Route, RoutingAlgorithm
 from .ndt import NodeDepthTree
+from .flow import reconstruct_min_hop_path
+from .greedy import GreedyRoutingAlgorithm
 
 log = logging.getLogger(__name__)
 
