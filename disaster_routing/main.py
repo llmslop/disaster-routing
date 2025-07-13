@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 import logging
+from random import seed
 from typing import Any, cast
 
 import hydra
@@ -40,6 +41,7 @@ class MainConfig:
     instance: InstanceGeneratorConfig = field(default_factory=InstanceGeneratorConfig)
     eval: EvaluationConfig = MISSING
     safety_checks: bool = True
+    random_seed: int = 42
 
 
 OmegaConf.register_new_resolver(
@@ -57,6 +59,10 @@ log = logging.getLogger(__name__)
 
 @hydra.main(version_base=None, config_path="conf", config_name="default")
 def my_main(cfg: MainConfig):
+    log.debug(SL("RNG seed", seed=cfg.random_seed))
+    seed(cfg.random_seed)
+
+    log.debug(SL("Running on instance", instance=cfg.instance.path))
     instance = load_or_gen_instance(cfg.instance)
     evaluator = cast(Evaluator, instantiate(cfg.eval))
     # dc_placement = solve_dc_placement(instance, dc_positions)
