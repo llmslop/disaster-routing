@@ -34,16 +34,14 @@ class NodeDepthTree:
         # Single-point crossover
         point = random.randint(1, len(self.depths) - 1)
         child_depths = self.depths[:point] + other.depths[point:]
-        child = NodeDepthTree.__new__(NodeDepthTree)
-        child.depths = child_depths
-        return child
+        return NodeDepthTree(child_depths)
 
     def mutate(self, mutation_rate: float) -> "NodeDepthTree":
         copy = self.copy()
         for i in range(len(copy.depths)):
             if random.random() < mutation_rate:
                 # Mutate depth randomly within a reasonable range
-                if copy.depths[i] != -1:
+                if copy.depths[i] > 0:
                     # For demonstration, add or subtract 1, but keep >= 0
                     change = random.choice([-1, 1])
                     new_depth = max(0, copy.depths[i] + change)
