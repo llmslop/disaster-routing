@@ -36,7 +36,7 @@ class FlowLocalSearchAlgorithmConfig(RoutingAlgorithmConfig):
 class SGARoutingAlgorithmConfig(RoutingAlgorithmConfig):
     _target_: str = "disaster_routing.routing.sga.SGARoutingAlgorithm"
     _short_: str = "sga"
-    num_gens: int = 100
+    num_gens: int = 30
     pop_size: int = 100
     max_depth: int = 4
     cr_rate: float = 0.7
