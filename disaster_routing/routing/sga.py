@@ -169,10 +169,9 @@ class Individual:
 
     @staticmethod
     def random(inst: Instance, content_placement: dict[int, list[int]]) -> "Individual":
-        # TODO: properly initialize initial population
-        base = Individual(
-            GreedyRoutingAlgorithm().route_instance(inst, content_placement)
-        )
+        generator = FlowRoutingAlgorithm()
+        inst = Individual.clone_instance(inst)
+        base = Individual(generator.route_instance(inst, content_placement))
         mut = base.mutate(inst, content_placement, 0.5, 10)
         return base if mut is None else mut
 
