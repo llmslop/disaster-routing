@@ -6,6 +6,8 @@ from typing import Callable, cast, override
 
 from hydra.utils import instantiate
 
+from disaster_routing.routing.ls import MofiLSRoutingAlgorithm
+
 from ..conflicts.config import DSASolverConfig
 from ..conflicts.conflict_graph import ConflictGraph
 from ..conflicts.solver import DSASolver
@@ -16,10 +18,9 @@ from ..topologies.topology import Topology
 from ..utils.welford import RunningStats
 from ..utils.structlog import SL
 from ..utils.ilist import ilist
-from .routing_algo import Route, RoutingAlgorithm
+from .routing_algo import InfeasibleRouteError, Route, RoutingAlgorithm
 from .ndt import NodeDepthTree
-from .flow import reconstruct_min_hop_path
-from .greedy import GreedyRoutingAlgorithm
+from .flow import FlowRoutingAlgorithm, reconstruct_min_hop_path
 
 log = logging.getLogger(__name__)
 
@@ -37,13 +38,6 @@ class FitnessEvaluator:
         _, mofi = dsa_solver.solve()
         self.fitness_eval_count = self.fitness_eval_count + 1
         result = self.eval.evaluate(conflict_graph.total_fs(), mofi)
-        log.debug(
-            SL(
-                "SGA fitness",
-                routes=[[r.node_list for r in rs] for rs in routes],
-                result=result,
-            )
-        )
         return result
 
     def __init__(self, inst: Instance, eval: Evaluator, dsa_config: DSASolverConfig):
@@ -168,6 +162,19 @@ class Individual:
         return self.fitness_value
 
     @staticmethod
+    def clone_instance(inst: Instance) -> Instance:
+        inst = inst.copy()
+        nodes = list(inst.topology.graph.nodes)
+        for u, v in zip(nodes, nodes):
+            if u >= v:
+                continue
+            weight = inst.topology.graph.edges[u, v]["weight"]
+            weight = random.random() * weight
+            inst.topology.graph.edges[u, v]["weight"] = weight
+            inst.topology.graph.edges[v, u]["weight"] = weight
+        return inst
+
+    @staticmethod
     def random(inst: Instance, content_placement: dict[int, list[int]]) -> "Individual":
         generator = FlowRoutingAlgorithm()
         inst = Individual.clone_instance(inst)
@@ -205,21 +212,22 @@ class Individual:
         mut_rate: float,
         num_retries_per_req: int,
     ) -> "Individual | None":
-        all_routes: list[ilist[Route]] = []
-        for req, ndt1 in zip(inst.requests, self.to_ndts()):
-            success = False
-            for _ in range(num_retries_per_req):
-                ndt = ndt1.mutate(mut_rate)
-                indv = Individual.route_from_ndt(
-                    inst.topology, req, content_placement[req.content_id], ndt
-                )
-                if indv is not None:
-                    all_routes.append(indv)
-                    success = True
-                    break
-            if not success:
-                return None
-        return Individual(tuple(all_routes))
+        try:
+            all_routes: list[ilist[Route]] = []
+            k = random.choice(range(len(self.all_routes)))
+
+            edges = [e for e in inst.topology.graph.edges]
+            inst = inst.remove_edge(random.choice(edges))
+            new_route = FlowRoutingAlgorithm().route_request(
+                inst.requests[k],
+                inst.topology,
+                content_placement[inst.requests[k].content_id],
+            )
+            for i, route in enumerate(self.all_routes):
+                all_routes.append(new_route if i == k else route)
+            return Individual(tuple(all_routes))
+        except InfeasibleRouteError:
+            return None
 
 
 class SGA:
