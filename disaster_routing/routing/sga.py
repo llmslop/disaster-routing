@@ -6,8 +6,6 @@ from typing import Callable, cast, override
 
 from hydra.utils import instantiate
 
-from disaster_routing.routing.ls import MofiLSRoutingAlgorithm
-
 from ..conflicts.config import DSASolverConfig
 from ..conflicts.conflict_graph import ConflictGraph
 from ..conflicts.solver import DSASolver
@@ -190,19 +188,8 @@ class Individual:
         num_retries_per_req: int,
     ) -> "Individual | None":
         all_routes: list[ilist[Route]] = []
-        for req, ndt1, ndt2 in zip(inst.requests, self.to_ndts(), other.to_ndts()):
-            success = False
-            for _ in range(num_retries_per_req):
-                ndt = ndt1.crossover(ndt2)
-                route = Individual.route_from_ndt(
-                    inst.topology, req, content_placement[req.content_id], ndt
-                )
-                if route is not None:
-                    all_routes.append(route)
-                    success = True
-                    break
-            if not success:
-                return None
+        for i, (r1, r2) in enumerate(zip(self.all_routes, other.all_routes)):
+            all_routes.append(random.choice([r1, r2]))
         return Individual(tuple(all_routes))
 
     def mutate(
