@@ -233,6 +233,7 @@ class SGA:
     mut_rate: float
     cr_num_retries_per_req: int
     mut_num_retries_per_req: int
+    elitism_rate: float
 
     def __init__(
         self,
@@ -245,6 +246,7 @@ class SGA:
         mut_rate: float,
         cr_num_retries_per_req: int,
         mut_num_retries_per_req: int,
+        elitism_rate: float,
     ):
         self.inst = inst
         self.content_placement = content_placement
@@ -255,6 +257,7 @@ class SGA:
         self.mut_rate = mut_rate
         self.cr_num_retries_per_req = cr_num_retries_per_req
         self.mut_num_retries_per_req = mut_num_retries_per_req
+        self.elitism_rate = elitism_rate
         self.population: list[Individual] = [
             Individual.random(inst, content_placement) for _ in range(pop_size)
         ]
@@ -275,6 +278,18 @@ class SGA:
         for gen in range(generations):
             selected = self.select()
             next_population: list[Individual] = []
+
+            # elitism selection
+            elitism_count = max(
+                1, int(self.elitism_rate * self.pop_size)
+            )  # configurable rate, at least 1
+            next_population.extend(
+                sorted(
+                    self.population,
+                    key=lambda ind: ind.fitness(self.evaluator),
+                )[:elitism_count]
+            )
+
             while len(next_population) < self.pop_size:
                 parent1 = random.choice(selected)
                 parent2 = random.choice(selected)
@@ -343,6 +358,7 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
     mut_rate: float
     cr_num_retries_per_req: int
     mut_num_retries_per_req: int
+    elitism_rate: float
 
     def __init__(
         self,
@@ -355,6 +371,7 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
         mut_rate: float,
         cr_num_retries_per_req: int,
         mut_num_retries_per_req: int,
+        elitism_rate: float,
         **_: object,
     ):
         self.dsa_solver = dsa_solver
@@ -366,6 +383,7 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
         self.mut_rate = mut_rate
         self.cr_num_retries_per_req = cr_num_retries_per_req
         self.mut_num_retries_per_req = mut_num_retries_per_req
+        self.elitism_rate = elitism_rate
 
     @override
     def route_instance(
@@ -381,6 +399,7 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
             self.mut_rate,
             self.cr_num_retries_per_req,
             self.mut_num_retries_per_req,
+            self.elitism_rate,
         )
         sga.evolve(self.num_gens)
         return sga.best().all_routes

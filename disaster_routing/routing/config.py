@@ -43,6 +43,7 @@ class SGARoutingAlgorithmConfig(RoutingAlgorithmConfig):
     mut_rate: float = 0.1
     cr_num_retries_per_req: int = 10
     mut_num_retries_per_req: int = 10
+    elitism_rate: float = 0.04
 
 
 def register_routing_algo_configs():
