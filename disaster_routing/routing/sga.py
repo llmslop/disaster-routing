@@ -295,16 +295,17 @@ class SGA:
                         parent2,
                         self.cr_num_retries_per_req,
                     )
-                    cr_success_rate.update(0.0 if child is None else 1.0)
+                cr_success_rate.update(0.0 if child is None else 1.0)
                 if child is None:
                     child = parent1
 
-                child = child.mutate(
-                    self.inst,
-                    self.content_placement,
-                    self.mut_rate,
-                    self.mut_num_retries_per_req,
-                )
+                if random.random() < self.mut_rate:
+                    child = child.mutate(
+                        self.inst,
+                        self.content_placement,
+                        self.mut_rate,
+                        self.mut_num_retries_per_req,
+                    )
                 mut_success_rate.update(0.0 if child is None else 1.0)
                 if child is None:
                     child = parent1
