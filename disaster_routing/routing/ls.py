@@ -13,6 +13,7 @@ from ..conflicts.solver import DSASolver
 from ..eval.evaluator import Evaluator
 from .greedy import GreedyRoutingAlgorithm
 from .flow import FlowRoutingAlgorithm
+from ..utils.ilist import ilist
 
 
 log = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
 
     def route_instance_single_pass(
         self, inst: Instance, content_placement: dict[int, list[int]]
-    ) -> tuple[list[list[Route]], set[tuple[int, int]], int, int]:
+    ) -> tuple[ilist[ilist[Route]], set[tuple[int, int]], int, int]:
         routes = self.base.route_instance(inst, content_placement)
         flattened_routes = [r for route in routes for r in route]
         conflict_graph = ConflictGraph(inst, routes)
@@ -70,7 +71,7 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
     @override
     def route_instance(
         self, inst: Instance, content_placement: dict[int, list[int]]
-    ) -> list[list[Route]]:
+    ) -> ilist[ilist[Route]]:
         routes, edges_with_mofi, total_fs, mofi = self.route_instance_single_pass(
             inst, content_placement
         )

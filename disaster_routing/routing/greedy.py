@@ -7,6 +7,7 @@ from .routing_algo import InfeasibleRouteError, RoutingAlgorithm, Route
 from ..instances.modulation import ModulationFormat
 from ..instances.request import Request
 from ..topologies.topology import Topology
+from ..utils.ilist import ilist
 
 
 class GreedyRoutingAlgorithm(RoutingAlgorithm):
@@ -14,12 +15,14 @@ class GreedyRoutingAlgorithm(RoutingAlgorithm):
         pass
 
     @override
-    def route_request(self, req: Request, top: Topology, dst: list[int]) -> list[Route]:
+    def route_request(
+        self, req: Request, top: Topology, dst: list[int]
+    ) -> ilist[Route]:
         assert len(dst) >= 2
         graph = top.graph.copy()
 
         routes: list[Route] = []
-        best_route_set: list[Route] | None = None
+        best_route_set: ilist[Route] | None = None
         best_route_set_cost = np.inf
 
         for K in range(len(dst)):
@@ -41,7 +44,7 @@ class GreedyRoutingAlgorithm(RoutingAlgorithm):
             if nearest_node is None or nearest_node not in paths:
                 break
 
-            path = paths[nearest_node]
+            path = ilist[int](paths[nearest_node])
             for dz in top.dzs:
                 if dz.affects_path(path, exclude_source=True):
                     dz.remove_from_graph(graph)
@@ -59,7 +62,7 @@ class GreedyRoutingAlgorithm(RoutingAlgorithm):
             if len(routes) >= 2:
                 cost = self.route_set_cost(routes, req.bpsk_fs_count)
                 if cost < best_route_set_cost:
-                    best_route_set = list(routes)
+                    best_route_set = ilist(routes)
                     best_route_set_cost = cost
 
         if best_route_set is None:

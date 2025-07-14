@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from statistics import mean
 from typing import override
 
@@ -6,6 +7,7 @@ from ..instances.instance import Instance
 from ..instances.modulation import ModulationFormat
 from ..instances.request import Request
 from ..topologies.topology import Topology
+from ..utils.ilist import ilist
 
 
 class InfeasibleRouteError(Exception):
@@ -15,13 +17,13 @@ class InfeasibleRouteError(Exception):
 
 class Route:
     top: Topology
-    node_list: list[int]
+    node_list: ilist[int]
     format: ModulationFormat
 
     def __init__(
         self,
         top: Topology,
-        node_list: list[int],
+        node_list: ilist[int],
         format: ModulationFormat | None = None,
     ):
         self.top = top
@@ -47,18 +49,22 @@ class Route:
     def __repr__(self) -> str:
         return str(self.node_list)
 
-    # only copies the node_list
-    def shallow_copy(self) -> "Route":
-        return Route(self.top, self.node_list.copy(), self.format)
+    @override
+    def __hash__(self) -> int:
+        return self.node_list.__hash__()
+
+    @override
+    def __eq__(self, value: object, /) -> bool:
+        return self.node_list == value.node_list if isinstance(value, Route) else False
 
 
 class RoutingAlgorithm(ABC):
     @abstractmethod
     def route_request(
         self, req: Request, top: Topology, dst: list[int]
-    ) -> list[Route]: ...
+    ) -> ilist[Route]: ...
 
-    def check_solution(self, req: Request, dst: list[int], routes: list[Route]):
+    def check_solution(self, req: Request, dst: Iterable[int], routes: ilist[Route]):
         tops = set(route.top for route in routes)
         assert len(tops) == 1
 
@@ -82,8 +88,8 @@ class RoutingAlgorithm(ABC):
 
     def route_instance(
         self, inst: Instance, content_placement: dict[int, list[int]]
-    ) -> list[list[Route]]:
-        return [
+    ) -> ilist[ilist[Route]]:
+        return tuple(
             self.route_request(req, inst.topology, content_placement[req.content_id])
             for req in inst.requests
-        ]
+        )

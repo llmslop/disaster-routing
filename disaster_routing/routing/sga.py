@@ -1,4 +1,4 @@
-from functools import lru_cache
+from functools import cache
 import logging
 from math import isnan
 import random
@@ -15,6 +15,7 @@ from ..instances.request import Request
 from ..topologies.topology import Topology
 from ..utils.welford import RunningStats
 from ..utils.structlog import SL
+from ..utils.ilist import ilist
 from .routing_algo import Route, RoutingAlgorithm
 from .ndt import NodeDepthTree
 from .flow import reconstruct_min_hop_path
@@ -27,39 +28,44 @@ class FitnessEvaluator:
     inst: Instance
     eval: Evaluator
     dsa_config: DSASolverConfig
-    eval_cached: Callable[[tuple[tuple[tuple[int, ...], ...], ...]], float]
+    eval_cached: Callable[[ilist[ilist[Route]]], float]
+    fitness_eval_count: int = 0
 
-    # TODO: make this uniform
-    def eval_tuple(self, inp: tuple[tuple[tuple[int, ...], ...], ...]) -> float:
-        routes = [
-            [Route(self.inst.topology, list(r)) for r in routes] for routes in inp
-        ]
+    def eval_tuple(self, routes: ilist[ilist[Route]]) -> float:
         conflict_graph = ConflictGraph(self.inst, routes)
         dsa_solver = cast(DSASolver, instantiate(self.dsa_config, conflict_graph))
         _, mofi = dsa_solver.solve()
-        return self.eval.evaluate(conflict_graph.total_fs(), mofi)
+        self.fitness_eval_count = self.fitness_eval_count + 1
+        result = self.eval.evaluate(conflict_graph.total_fs(), mofi)
+        log.debug(
+            SL(
+                "SGA fitness",
+                routes=[[r.node_list for r in rs] for rs in routes],
+                result=result,
+            )
+        )
+        return result
 
     def __init__(self, inst: Instance, eval: Evaluator, dsa_config: DSASolverConfig):
         self.inst = inst
         self.eval = eval
         self.dsa_config = dsa_config
 
-        self.eval_cached = lru_cache()(lambda inp: self.eval_tuple(inp))
+        self.eval_cached = cache(lambda inp: self.eval_tuple(inp))
 
     def evaluate(self, indv: "Individual") -> float:
-        inp = tuple(
-            tuple(tuple(r.node_list) for r in routes) for routes in indv.all_routes
-        )
-        return self.eval_cached(inp)
+        return self.eval_cached(indv.all_routes)
 
 
 class Individual:
-    all_routes: list[list[Route]]
+    all_routes: ilist[ilist[Route]]
     fitness_value: float = float("nan")
 
-    def __init__(self, all_routes: list[list[Route]]):
+    def __init__(self, all_routes: ilist[ilist[Route]]):
         assert all(len(routes) > 1 for routes in all_routes)
-        self.all_routes = [[r.shallow_copy() for r in routes] for routes in all_routes]
+        self.all_routes = tuple(
+            tuple(sorted(routes, key=lambda r: r.node_list)) for routes in all_routes
+        )
 
     def to_ndts(self) -> list[NodeDepthTree]:
         return [NodeDepthTree.from_routes(routes) for routes in self.all_routes]
@@ -70,7 +76,7 @@ class Individual:
         content_placement: dict[int, list[int]],
         ndts: list[NodeDepthTree],
     ) -> "Individual | None":
-        all_routes: list[list[Route]] = []
+        all_routes: list[ilist[Route]] = []
         for req, ndt in zip(inst.requests, ndts):
             indv = Individual.route_from_ndt(
                 inst.topology, req, content_placement[req.content_id], ndt
@@ -78,14 +84,14 @@ class Individual:
             if indv is None:
                 return None
             all_routes.append(indv)
-        return Individual(all_routes)
+        return Individual(tuple(all_routes))
 
     @staticmethod
     def route_from_ndt(
         top: Topology, req: Request, dst: list[int], ndt: NodeDepthTree
-    ) -> list[Route] | None:
+    ) -> ilist[Route] | None:
         if req.source in dst:
-            return [Route(top, [req.source]), Route(top, [req.source])]
+            return (Route(top, (req.source,)), Route(top, (req.source,)))
         layers: list[list[int]] = []
         src_dz = [dz_i for dz_i, dz in enumerate(top.dzs) if req.source in dz.nodes][0]
         dst_dzs = {
@@ -106,7 +112,7 @@ class Individual:
         if len(layers[0]) != 1:
             return None
 
-        route_dz_lists: dict[int, set[tuple[int, ...]]] = {src_dz: {(src_dz,)}}
+        route_dz_lists: dict[int, set[ilist[int]]] = {src_dz: {(src_dz,)}}
 
         def update_route(prev_dz: int, next_dz: int):
             old_routes = route_dz_lists[prev_dz]
@@ -154,7 +160,7 @@ class Individual:
         if len(valid_routes) <= 1:
             return None
 
-        return valid_routes
+        return tuple(valid_routes)
 
     def fitness(self, evaluator: FitnessEvaluator) -> float:
         if isnan(self.fitness_value):
@@ -177,7 +183,7 @@ class Individual:
         other: "Individual",
         num_retries_per_req: int,
     ) -> "Individual | None":
-        all_routes: list[list[Route]] = []
+        all_routes: list[ilist[Route]] = []
         for req, ndt1, ndt2 in zip(inst.requests, self.to_ndts(), other.to_ndts()):
             success = False
             for _ in range(num_retries_per_req):
@@ -191,7 +197,7 @@ class Individual:
                     break
             if not success:
                 return None
-        return Individual(all_routes)
+        return Individual(tuple(all_routes))
 
     def mutate(
         self,
@@ -200,7 +206,7 @@ class Individual:
         mut_rate: float,
         num_retries_per_req: int,
     ) -> "Individual | None":
-        all_routes: list[list[Route]] = []
+        all_routes: list[ilist[Route]] = []
         for req, ndt1 in zip(inst.requests, self.to_ndts()):
             success = False
             for _ in range(num_retries_per_req):
@@ -214,7 +220,7 @@ class Individual:
                     break
             if not success:
                 return None
-        return Individual(all_routes)
+        return Individual(tuple(all_routes))
 
 
 class SGA:
@@ -301,6 +307,24 @@ class SGA:
             log.debug(
                 SL("Mutation success rate", gen=gen, dist=mut_success_rate.info())
             )
+            log.debug(
+                SL(
+                    "Fintess eval count",
+                    gen=gen,
+                    count=self.evaluator.fitness_eval_count,
+                )
+            )
+            log.debug(
+                SL(
+                    "Best individual",
+                    gen=gen,
+                    indv=[
+                        [r.node_list for r in routes]
+                        for routes in self.best().all_routes
+                    ],
+                    fitness=self.best().fitness(self.evaluator),
+                )
+            )
             self.population = next_population
 
     def best(self, collection: list[Individual] | None = None) -> Individual:
@@ -346,7 +370,7 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
     @override
     def route_instance(
         self, inst: Instance, content_placement: dict[int, list[int]]
-    ) -> list[list[Route]]:
+    ) -> ilist[ilist[Route]]:
         sga = SGA(
             inst,
             FitnessEvaluator(inst, self.evaluator, self.dsa_solver),
@@ -362,5 +386,7 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
         return sga.best().all_routes
 
     @override
-    def route_request(self, req: Request, top: Topology, dst: list[int]) -> list[Route]:
+    def route_request(
+        self, req: Request, top: Topology, dst: list[int]
+    ) -> ilist[Route]:
         raise NotImplementedError()

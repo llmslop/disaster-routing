@@ -1,6 +1,8 @@
 from copy import deepcopy
 from typing import cast
 from networkx.readwrite.json_graph import node_link_data, node_link_graph
+
+from ..utils.ilist import ilist
 from .graphs import Graph, DiGraph
 
 
@@ -29,7 +31,7 @@ class DisasterZone:
         self.nodes = set(nodes) if nodes is not None else set()
         self.edges = set(edges) if edges is not None else set()
 
-    def affects_path(self, path: list[int], exclude_source: bool = False):
+    def affects_path(self, path: ilist[int], exclude_source: bool = False):
         path_nodes = path if not exclude_source else path[1:]
         if any(node in self.nodes for node in path_nodes):
             return True

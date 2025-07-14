@@ -1,4 +1,6 @@
 from typing import override
+
+from ..utils.ilist import ilist
 from .routing_algo import Route
 import random
 
@@ -12,7 +14,7 @@ class NodeDepthTree:
         self.depths = depths
 
     @staticmethod
-    def from_routes(routes: list[Route]) -> "NodeDepthTree":
+    def from_routes(routes: ilist[Route]) -> "NodeDepthTree":
         top = routes[0].top
         node_to_dz = {node: i for i, dz in enumerate(top.dzs) for node in dz.nodes}
         dz_depths: list[list[int]] = [[] for _ in range(len(top.dzs))]

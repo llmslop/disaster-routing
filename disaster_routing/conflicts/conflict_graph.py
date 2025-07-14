@@ -1,5 +1,7 @@
 from math import ceil
 
+from disaster_routing.utils.ilist import ilist
+
 from ..routing.routing_algo import Route
 from ..instances.instance import Instance
 from ..topologies.graphs import Graph
@@ -22,7 +24,7 @@ class ConflictGraph:
     graph: Graph
     num_fses: list[int]
 
-    def __init__(self, inst: Instance, routes: list[list[Route]]):
+    def __init__(self, inst: Instance, routes: ilist[ilist[Route]]):
         i = 0
         route_infos: list[RouteInfo] = []
         for req, route_set in zip(inst.requests, routes):

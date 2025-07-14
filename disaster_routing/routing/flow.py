@@ -7,6 +7,7 @@ from .routing_algo import InfeasibleRouteError, RoutingAlgorithm, Route
 from ..instances.request import Request
 from ..topologies.topology import Topology
 from ..topologies.graphs import Graph, StrDiGraph
+from ..utils.ilist import ilist
 
 
 def extract_dz_index(name: str) -> int | None:
@@ -74,7 +75,7 @@ def extract_all_flow_paths(
 
 
 # TODO: add available out nodes constraint
-def reconstruct_min_hop_path(G: Graph, group_path: list[set[int]]) -> list[int]:
+def reconstruct_min_hop_path(G: Graph, group_path: list[set[int]]) -> ilist[int]:
     # group_path: list of sets of nodes (G1, G2, ..., Gk)
     # Returns: (min_path, hop_count)
 
@@ -101,11 +102,11 @@ def reconstruct_min_hop_path(G: Graph, group_path: list[set[int]]) -> list[int]:
         dp = next_dp
 
         if not dp:
-            return []  # no path possible
+            return ()  # no path possible
 
     # Get the best among last group
     _, (total_hops, path) = min(dp.items(), key=lambda x: x[1][0])
-    return path
+    return ilist[int](path)
 
 
 class FlowRoutingAlgorithm(RoutingAlgorithm):
@@ -113,10 +114,12 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
         pass
 
     @override
-    def route_request(self, req: Request, top: Topology, dst: list[int]) -> list[Route]:
+    def route_request(
+        self, req: Request, top: Topology, dst: list[int]
+    ) -> ilist[Route]:
         assert len(dst) >= 2
 
-        best_route_set: list[Route] | None = None
+        best_route_set: ilist[Route] | None = None
         best_route_set_cost = np.inf
 
         for K in range(1, len(dst) + 1):
@@ -172,7 +175,7 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                 if len(routes) >= 2:
                     cost = self.route_set_cost(routes, req.bpsk_fs_count)
                     if cost < best_route_set_cost:
-                        best_route_set = list(routes)
+                        best_route_set = tuple(routes)
                         best_route_set_cost = cost
             except nx.NetworkXUnfeasible:
                 break
