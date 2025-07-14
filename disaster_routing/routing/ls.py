@@ -42,14 +42,6 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
     def route_request(self, req: Request, top: Topology, dst: list[int]) -> list[Route]:
         raise NotImplementedError()
 
-    @staticmethod
-    def remove_edge_from_instance(inst: Instance, edge: tuple[int, int]) -> Instance:
-        inst = inst.copy()
-        u, v = edge
-        inst.topology.graph.remove_edge(u, v)
-        inst.topology.graph.remove_edge(v, u)
-        return inst
-
     def route_instance_single_pass(
         self, inst: Instance, content_placement: dict[int, list[int]]
     ) -> tuple[ilist[ilist[Route]], set[tuple[int, int]], int, int]:
@@ -80,7 +72,7 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
         for iter in range(self.f_max):
             change = False
             for edge in edges_with_mofi:
-                ls_inst = MofiLSRoutingAlgorithm.remove_edge_from_instance(inst, edge)
+                ls_inst = inst.remove_edge(edge)
                 try:
                     ls_routes, ls_edges_with_mofi, total_fs, mofi = (
                         self.route_instance_single_pass(ls_inst, content_placement)
