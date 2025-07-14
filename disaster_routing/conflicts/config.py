@@ -27,6 +27,7 @@ class NPMDSASolverConfig(DSASolverConfig):
 @dataclass
 class FPGADSASolverConfig(DSASolverConfig):
     _target_: str = "disaster_routing.conflicts.npm.FPGADSASolver"
+    num_attempts: int = 0
 
 
 def register_dsa_solver_configs():
