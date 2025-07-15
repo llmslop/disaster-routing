@@ -61,9 +61,11 @@ print(Z)
 print("\nTập hợp R :")
 print(R)
 
+link_weights = {(u, v): w for (u, v, w) in A}
+
 
 # Hàm tính chi phí của một đường đi
-def calculate_path_cost(path, modulation, φr, link_weights):
+def calculate_path_cost(path, modulation, φr):
     """
     Tính chi phí của đường đi dựa trên trọng số của từng liên kết.
 
@@ -71,7 +73,6 @@ def calculate_path_cost(path, modulation, φr, link_weights):
     - path: Danh sách các liên kết trên đường đi (ví dụ: [(u1, v1), (u2, v2), ...]).
     - modulation: Định dạng điều chế được chọn (ví dụ: {'name': 'BPSK', 'hm': 9600, 'Tm': 12.5}).
     - φr: Yêu cầu FS của yêu cầu r.
-    - link_weights: Từ điển chứa trọng số của từng liên kết (ví dụ: {(u1, v1): 1.5, (u2, v2): 2.0, ...}).
 
     Trả về:
     - Chi phí của đường đi (costr_p).
@@ -169,9 +170,7 @@ def HCDP(G, R, D, Z, M, S):
                 modulation = select_modulation(path_length, M)
                 if modulation:
                     # Tính chi phí của đường đi
-                    cost = calculate_path_cost(
-                        shortest_path, modulation, φr, link_weights
-                    )
+                    cost = calculate_path_cost(shortest_path, modulation, φr)
 
                     # Lưu đường đi và chi phí
                     paths[(k, r_idx)] = shortest_path
