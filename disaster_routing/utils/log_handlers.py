@@ -25,4 +25,14 @@ except ImportError:
     warn("colorlog not installed, colored logging will not be available.")
 
     class ColoredFormatter(Formatter):
-        pass
+        def __init__(
+            self,
+            fmt: str | None = None,
+            datefmt: str | None = None,
+            style="%",
+            validate: bool = True,
+            *,
+            defaults=None,
+            **kwargs,
+        ) -> None:
+            super().__init__(fmt, datefmt, style, validate, defaults=defaults)
