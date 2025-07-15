@@ -319,7 +319,7 @@ class SGA:
             )
             log.debug(
                 SL(
-                    "Fintess eval count",
+                    "Fitness eval count",
                     gen=gen,
                     count=self.evaluator.fitness_eval_count,
                 )
