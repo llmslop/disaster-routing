@@ -4,7 +4,7 @@ formatters:
   simple:
     format: '[%(levelname)s] - %(message)s'
   simple-colored:
-    '()': 'colorlog.ColoredFormatter'
+    '()': 'disaster_routing.utils.log_handlers.ColoredFormatter'
     format: '[%(log_color)s%(levelname)s%(reset)s] - %(message)s'
     log_colors:
       DEBUG: purple

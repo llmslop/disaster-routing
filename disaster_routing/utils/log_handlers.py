@@ -1,6 +1,7 @@
-from logging import FileHandler, LogRecord
+from logging import FileHandler, LogRecord, Formatter
 import re
 from typing import override
+from warnings import warn
 
 
 class DecoloringFileHandler(FileHandler):
@@ -13,3 +14,15 @@ class DecoloringFileHandler(FileHandler):
     @override
     def format(self, record: LogRecord) -> str:
         return self.ansi_escape.sub("", super().format(record))
+
+
+try:
+    import colorlog
+
+    class ColoredFormatter(colorlog.ColoredFormatter):
+        pass
+except ImportError:
+    warn("colorlog not installed, colored logging will not be available.")
+
+    class ColoredFormatter(Formatter):
+        pass
