@@ -13,7 +13,7 @@ from ..eval.evaluator import Evaluator
 from ..instances.instance import Instance
 from ..instances.request import Request
 from ..topologies.topology import Topology
-from ..utils.welford import RunningStats
+from ..utils.success_stats import SuccessRateStats
 from ..utils.structlog import SL
 from ..utils.ilist import ilist
 from .routing_algo import InfeasibleRouteError, Route, RoutingAlgorithm
@@ -267,8 +267,8 @@ class SGA:
         return selected
 
     def evolve(self, generations: int) -> None:
-        cr_success_rate = RunningStats()
-        mut_success_rate = RunningStats()
+        cr_success_rate = SuccessRateStats()
+        mut_success_rate = SuccessRateStats()
         for gen in range(generations):
             selected = self.select()
             next_population: list[Individual] = []
@@ -295,7 +295,7 @@ class SGA:
                         parent2,
                         self.cr_num_retries_per_req,
                     )
-                cr_success_rate.update(0.0 if child is None else 1.0)
+                    cr_success_rate.update(child is not None)
                 if child is None:
                     child = parent1
 
@@ -306,7 +306,7 @@ class SGA:
                         self.mut_rate,
                         self.mut_num_retries_per_req,
                     )
-                mut_success_rate.update(0.0 if child is None else 1.0)
+                    mut_success_rate.update(child is not None)
                 if child is None:
                     child = parent1
                 next_population.append(child)
