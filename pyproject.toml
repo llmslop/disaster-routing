@@ -21,6 +21,11 @@ reportAny = "none"
 reportExplicitAny = "none"
 
 [dependency-groups]
+color-log = [
+    "colorama>=0.4.6",
+    "colorlog>=6.9.0",
+    "pygments>=2.19.2",
+]
 dev = [
     "fs>=2.4.16",
     "jq>=1.9.1",
@@ -29,3 +34,6 @@ dev = [
     "pyyaml>=6.0.2",
     "xlsxwriter>=3.2.5",
 ]
+
+[tool.uv]
+default-groups = ["dev", "color-log"]

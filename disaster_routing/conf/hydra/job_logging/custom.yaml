@@ -3,6 +3,15 @@ formatters:
   # ci-friendly format
   simple:
     format: '[%(levelname)s] - %(message)s'
+  simple-colored:
+    '()': 'colorlog.ColoredFormatter'
+    format: '[%(log_color)s%(levelname)s%(reset)s] - %(message)s'
+    log_colors:
+      DEBUG: purple
+      INFO: green
+      WARNING: yellow
+      ERROR: red
+      CRITICAL: red
   # hydra default logging format (as of july 2025)
   full:
     format: '[%(asctime)s][%(name)s][%(levelname)s] - %(message)s'
@@ -10,11 +19,11 @@ handlers:
   console:
     level: ${if:${hydra.verbose},DEBUG,INFO}
     class: logging.StreamHandler
-    formatter: simple
+    formatter: ${if:${colorlog:},simple-colored,simple}
     stream: ext://sys.stdout
   file:
     level: DEBUG
-    class: logging.FileHandler
+    class: disaster_routing.utils.log_handlers.DecoloringFileHandler
     formatter: full
     # absolute file path
     filename: ${hydra.runtime.output_dir}/${hydra.job.name}.log
