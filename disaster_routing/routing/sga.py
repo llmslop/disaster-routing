@@ -13,13 +13,12 @@ from ..eval.evaluator import Evaluator
 from ..instances.instance import Instance
 from ..instances.request import Request
 from ..topologies.topology import Topology
-from ..utils.welford import RunningStats
+from ..utils.success_stats import SuccessRateStats
 from ..utils.structlog import SL
 from ..utils.ilist import ilist
-from .routing_algo import Route, RoutingAlgorithm
+from .routing_algo import InfeasibleRouteError, Route, RoutingAlgorithm
 from .ndt import NodeDepthTree
-from .flow import reconstruct_min_hop_path
-from .greedy import GreedyRoutingAlgorithm
+from .flow import FlowRoutingAlgorithm, reconstruct_min_hop_path
 
 log = logging.getLogger(__name__)
 
@@ -37,13 +36,6 @@ class FitnessEvaluator:
         _, mofi = dsa_solver.solve()
         self.fitness_eval_count = self.fitness_eval_count + 1
         result = self.eval.evaluate(conflict_graph.total_fs(), mofi)
-        log.debug(
-            SL(
-                "SGA fitness",
-                routes=[[r.node_list for r in rs] for rs in routes],
-                result=result,
-            )
-        )
         return result
 
     def __init__(self, inst: Instance, eval: Evaluator, dsa_config: DSASolverConfig):
@@ -168,11 +160,23 @@ class Individual:
         return self.fitness_value
 
     @staticmethod
+    def clone_instance(inst: Instance) -> Instance:
+        inst = inst.copy()
+        nodes = list(inst.topology.graph.nodes)
+        for u, v in zip(nodes, nodes):
+            if u >= v:
+                continue
+            weight = inst.topology.graph.edges[u, v]["weight"]
+            weight = random.random() * weight
+            inst.topology.graph.edges[u, v]["weight"] = weight
+            inst.topology.graph.edges[v, u]["weight"] = weight
+        return inst
+
+    @staticmethod
     def random(inst: Instance, content_placement: dict[int, list[int]]) -> "Individual":
-        # TODO: properly initialize initial population
-        base = Individual(
-            GreedyRoutingAlgorithm().route_instance(inst, content_placement)
-        )
+        generator = FlowRoutingAlgorithm()
+        inst = Individual.clone_instance(inst)
+        base = Individual(generator.route_instance(inst, content_placement))
         mut = base.mutate(inst, content_placement, 0.5, 10)
         return base if mut is None else mut
 
@@ -184,19 +188,8 @@ class Individual:
         num_retries_per_req: int,
     ) -> "Individual | None":
         all_routes: list[ilist[Route]] = []
-        for req, ndt1, ndt2 in zip(inst.requests, self.to_ndts(), other.to_ndts()):
-            success = False
-            for _ in range(num_retries_per_req):
-                ndt = ndt1.crossover(ndt2)
-                route = Individual.route_from_ndt(
-                    inst.topology, req, content_placement[req.content_id], ndt
-                )
-                if route is not None:
-                    all_routes.append(route)
-                    success = True
-                    break
-            if not success:
-                return None
+        for i, (r1, r2) in enumerate(zip(self.all_routes, other.all_routes)):
+            all_routes.append(random.choice([r1, r2]))
         return Individual(tuple(all_routes))
 
     def mutate(
@@ -206,21 +199,22 @@ class Individual:
         mut_rate: float,
         num_retries_per_req: int,
     ) -> "Individual | None":
-        all_routes: list[ilist[Route]] = []
-        for req, ndt1 in zip(inst.requests, self.to_ndts()):
-            success = False
-            for _ in range(num_retries_per_req):
-                ndt = ndt1.mutate(mut_rate)
-                indv = Individual.route_from_ndt(
-                    inst.topology, req, content_placement[req.content_id], ndt
-                )
-                if indv is not None:
-                    all_routes.append(indv)
-                    success = True
-                    break
-            if not success:
-                return None
-        return Individual(tuple(all_routes))
+        try:
+            all_routes: list[ilist[Route]] = []
+            k = random.choice(range(len(self.all_routes)))
+
+            edges = [e for e in inst.topology.graph.edges]
+            inst = inst.remove_edge(random.choice(edges))
+            new_route = FlowRoutingAlgorithm().route_request(
+                inst.requests[k],
+                inst.topology,
+                content_placement[inst.requests[k].content_id],
+            )
+            for i, route in enumerate(self.all_routes):
+                all_routes.append(new_route if i == k else route)
+            return Individual(tuple(all_routes))
+        except InfeasibleRouteError:
+            return None
 
 
 class SGA:
@@ -273,8 +267,8 @@ class SGA:
         return selected
 
     def evolve(self, generations: int) -> None:
-        cr_success_rate = RunningStats()
-        mut_success_rate = RunningStats()
+        cr_success_rate = SuccessRateStats()
+        mut_success_rate = SuccessRateStats()
         for gen in range(generations):
             selected = self.select()
             next_population: list[Individual] = []
@@ -301,17 +295,18 @@ class SGA:
                         parent2,
                         self.cr_num_retries_per_req,
                     )
-                    cr_success_rate.update(0.0 if child is None else 1.0)
+                    cr_success_rate.update(child is not None)
                 if child is None:
                     child = parent1
 
-                child = child.mutate(
-                    self.inst,
-                    self.content_placement,
-                    self.mut_rate,
-                    self.mut_num_retries_per_req,
-                )
-                mut_success_rate.update(0.0 if child is None else 1.0)
+                if random.random() < self.mut_rate:
+                    child = child.mutate(
+                        self.inst,
+                        self.content_placement,
+                        self.mut_rate,
+                        self.mut_num_retries_per_req,
+                    )
+                    mut_success_rate.update(child is not None)
                 if child is None:
                     child = parent1
                 next_population.append(child)
@@ -324,7 +319,7 @@ class SGA:
             )
             log.debug(
                 SL(
-                    "Fintess eval count",
+                    "Fitness eval count",
                     gen=gen,
                     count=self.evaluator.fitness_eval_count,
                 )

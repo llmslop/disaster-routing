@@ -14,6 +14,7 @@ from ..eval.evaluator import Evaluator
 from .greedy import GreedyRoutingAlgorithm
 from .flow import FlowRoutingAlgorithm
 from ..utils.ilist import ilist
+from ..utils.structlog import SL
 
 
 log = logging.getLogger(__name__)
@@ -39,16 +40,10 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
         self.f_max = f_max
 
     @override
-    def route_request(self, req: Request, top: Topology, dst: list[int]) -> list[Route]:
+    def route_request(
+        self, req: Request, top: Topology, dst: list[int]
+    ) -> ilist[Route]:
         raise NotImplementedError()
-
-    @staticmethod
-    def remove_edge_from_instance(inst: Instance, edge: tuple[int, int]) -> Instance:
-        inst = inst.copy()
-        u, v = edge
-        inst.topology.graph.remove_edge(u, v)
-        inst.topology.graph.remove_edge(v, u)
-        return inst
 
     def route_instance_single_pass(
         self, inst: Instance, content_placement: dict[int, list[int]]
@@ -72,6 +67,7 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
     def route_instance(
         self, inst: Instance, content_placement: dict[int, list[int]]
     ) -> ilist[ilist[Route]]:
+        num_passes = 1
         routes, edges_with_mofi, total_fs, mofi = self.route_instance_single_pass(
             inst, content_placement
         )
@@ -80,8 +76,9 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
         for iter in range(self.f_max):
             change = False
             for edge in edges_with_mofi:
-                ls_inst = MofiLSRoutingAlgorithm.remove_edge_from_instance(inst, edge)
+                ls_inst = inst.remove_edge(edge)
                 try:
+                    num_passes += 1
                     ls_routes, ls_edges_with_mofi, total_fs, mofi = (
                         self.route_instance_single_pass(ls_inst, content_placement)
                     )
@@ -97,6 +94,7 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
             if not change:
                 break
 
+        log.debug(SL("Total passes", num_passes=num_passes))
         return routes
 
 

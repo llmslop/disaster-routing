@@ -15,6 +15,13 @@ class Instance:
     def copy(self) -> "Instance":
         return Instance(self.topology.copy(), deepcopy(self.requests))
 
+    def remove_edge(self, edge: tuple[int, int]) -> "Instance":
+        inst = self.copy()
+        u, v = edge
+        inst.topology.graph.remove_edge(u, v)
+        inst.topology.graph.remove_edge(v, u)
+        return inst
+
     @staticmethod
     def from_json(json: dict[str, object]) -> "Instance":
         return Instance(
