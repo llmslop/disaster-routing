@@ -1,7 +1,6 @@
-import pandas as pd
-import random
 from pulp import LpProblem, LpMinimize, LpVariable, lpSum, value
-from tqdm import tqdm
+from .read_input_from_stdin import read_input_from_stdin
+import random
 
 import time
 
@@ -9,62 +8,9 @@ import time
 start_time = time.time()
 
 # Khởi tạo một mô hình tối ưu hóa
-mdl = LpProblem("CDP_Model", LpMinimize)
+mdl = LpProblem("DP_Model", LpMinimize)
 
-# Đọc file Excel
-file_path = "D:\\HUS\\KLTN\\Test\\NFSTNET_data.xlsx"
-
-# Đọc từng sheet
-df_nodes = pd.read_excel(file_path, sheet_name="Nodes")
-df_edges = pd.read_excel(file_path, sheet_name="Edges")
-df_datacenter = pd.read_excel(file_path, sheet_name="Datacenters")
-df_deadzone = pd.read_excel(file_path, sheet_name="Deadzones")
-
-# Tập hợp V (Danh sách Nodes hợp lệ)
-V = sorted(df_nodes["Node"].tolist())
-
-# Tập hợp A (Danh sách Liên kết hợp lệ)
-A = []
-for _, row in df_edges.iterrows():
-    edge = (row["Source"], row["Target"], row["Weight"])
-    reverse_edge = (row["Target"], row["Source"], row["Weight"])
-
-    A.append(edge)
-    A.append(reverse_edge)  # Thêm cạnh đảo ngược
-
-
-# Tập hợp D (Danh sách Datacenter - Nodes hình vuông)
-D = sorted(df_datacenter["Datacenter"].tolist())
-
-# Tập hợp Z (Danh sách Deadzones - Nhóm liên kết bị ảnh hưởng)
-Z = []
-for _, row in df_deadzone.iterrows():
-    nodes_value = row["Nodes"]
-    if isinstance(nodes_value, str):  # Nếu là chuỗi, chia tách thành danh sách
-        affected_nodes = set(map(int, nodes_value.split(",")))
-    else:  # Nếu không phải chuỗi (số nguyên), chuyển thành tập hợp chỉ chứa số đó
-        affected_nodes = {int(nodes_value)}
-
-    affected_edges = [
-        edge for edge in A if edge[0] in affected_nodes or edge[1] in affected_nodes
-    ]
-
-    if affected_edges:
-        Z.append(affected_edges)
-
-
-# Kết quả
-print("\nTập hợp V (Danh sách Nodes):")
-print(V)
-
-print("\nTập hợp A (Danh sách Liên kết):")
-print(A)
-
-print("\nTập hợp D (Danh sách Datacenter - Nodes Hình Vuông):")
-print(D)
-
-print("\nTập hợp Z (Danh sách Deadzones - Nhóm Liên kết bị ảnh hưởng):")
-print(Z)
+V, A, D, Z = read_input_from_stdin()
 
 C = [1111, 2222, 3333]
 K = 2
@@ -706,4 +652,3 @@ if mdl.status == 1:
         print(f"Saved graph for request {r_idx} as request_{r_idx}_paths.png")
 else:
     print("No solution found.")
-
