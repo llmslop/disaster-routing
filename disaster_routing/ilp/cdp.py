@@ -41,6 +41,7 @@ class ILPCDP:
 
         self.inst = inst
         self.avail_dcs = avail_dcs
+        self.arcs = arcs
 
         self.p_k_ra = {
             (k, r_idx, a_idx): LpVariable(f"p^{k}_{r_idx}_{a_idx}", cat=LpBinary)
@@ -235,6 +236,7 @@ class ILPCDP:
             ]
             for z_idx, z in enumerate(inst.topology.dzs)
         }
+        self.dz_arcs = dz_arcs
 
         log.debug(SL("Disaster zone arcs", dz_arcs=dz_arcs))
 
@@ -343,7 +345,7 @@ class ILPCDP:
             )
             for k in range(max_paths - 2):
                 self.problem += (
-                    self.w_k_r[(k, r_idx)] <= self.w_k_r[(k + 1, r_idx)],
+                    self.w_k_r[(k, r_idx)] >= self.w_k_r[(k + 1, r_idx)],
                     f"Adaptive multi-path routing constraints (17:{r_idx}:{k})",
                 )
 
@@ -371,13 +373,11 @@ class ILPCDP:
 
         for r_idx, r in enumerate(inst.requests):
             for k in range(max_paths):
-                self.problem += (
-                    lpSum(
-                        self.Phi_k_ra[(k, r_idx, a_idx)] for a_idx, _ in enumerate(arcs)
+                for a_idx, _ in enumerate(arcs):
+                    self.problem += (
+                        self.Phi_k_ra[(k, r_idx, a_idx)] <= self.Phi_k_r[(k, r_idx)],
+                        f"Adaptive multi-path routing constraints (20:{r_idx}:{k}:{a_idx})",
                     )
-                    <= self.Phi_k_r[(k, r_idx)],
-                    f"Adaptive multi-path routing constraints (20:{r_idx}:{k})",
-                )
 
         for r_idx, r in enumerate(inst.requests):
             for k in range(max_paths):
@@ -558,7 +558,11 @@ class ILPCDP:
                     set_value(
                         self.alpha_k_rz[(k, r_idx, z_idx)],
                         len(all_routes[r_idx]) > pi
-                        and any(n in z.nodes for n in all_routes[r_idx][pi].node_list),
+                        and any(
+                            a[:2] in all_routes[r_idx][pi].edges()
+                            and a_idx in self.dz_arcs[z_idx]
+                            for a_idx, a in enumerate(self.arcs)
+                        ),
                     )
         for d in self.avail_dcs:
             for cr in self.contents:
@@ -588,7 +592,10 @@ class ILPCDP:
                 for m_idx, m in enumerate(ModulationFormat.all()):
                     set_value(
                         self.Phi_k_rm[(k, r_idx, m_idx)],
-                        num_fses[r_idx][pi] if pi < len(all_routes[r_idx]) else 0,
+                        num_fses[r_idx][pi]
+                        if pi < len(all_routes[r_idx])
+                        and m == all_routes[r_idx][pi].format
+                        else 0,
                     )
         for r_idx, r in enumerate(self.inst.requests):
             for k in range(self.max_paths):
