@@ -8,6 +8,8 @@ from hydra.utils import instantiate
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING, OmegaConf
 
+from .ilp.cdp import ILPCDP
+
 from .instances.generate import (
     InstanceGeneratorConfig,
     load_or_gen_instance,
@@ -41,7 +43,9 @@ class MainConfig:
     instance: InstanceGeneratorConfig = field(default_factory=InstanceGeneratorConfig)
     eval: EvaluationConfig = MISSING
     safety_checks: bool = True
+    ilp_check: bool = True
     random_seed: int = 42
+    ilp_solve: bool = False
 
 
 OmegaConf.register_new_resolver(
@@ -65,6 +69,7 @@ def my_main(cfg: MainConfig):
 
     log.debug(SL("Running on instance", instance=cfg.instance.path))
     instance = load_or_gen_instance(cfg.instance)
+    log.debug(SL("Instance info", instance=instance.to_json()))
     evaluator = cast(Evaluator, instantiate(cfg.eval))
     # dc_placement = solve_dc_placement(instance, dc_positions)
     contents = set(req.content_id for req in instance.requests)
@@ -78,6 +83,10 @@ def my_main(cfg: MainConfig):
         for content in contents
     }
     log.debug(SL("Content placement", placement=content_placement))
+
+    ilp = ILPCDP(instance, dc_positions, evaluator)
+    if cfg.ilp_solve:
+        _ = ilp.solve()
 
     if cfg.router is not None:
         router = cast(
@@ -124,6 +133,8 @@ def my_main(cfg: MainConfig):
                 score=evaluator.evaluate(conflict_graph.total_fs(), mofi),
             )
         )
+        if cfg.ilp_check:
+            ilp.check_solution(all_routes, tuple(start_indices))
 
 
 if __name__ == "__main__":
