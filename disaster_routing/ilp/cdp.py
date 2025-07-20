@@ -326,7 +326,7 @@ class ILPCDP:
         for r_idx, r in enumerate(inst.requests):
             self.problem += (
                 lpSum(self.w_k_r[(k, r_idx)] for k in range(max_paths - 1))
-                >= lpSum(k * self.xi_i_r[(k, r_idx)] for k in range(1, max_paths)),
+                == lpSum(k * self.xi_i_r[(k, r_idx)] for k in range(1, max_paths)),
                 f"Adaptive multi-path routing constraints (14:{r_idx})",
             )
         for r_idx, r in enumerate(inst.requests):
