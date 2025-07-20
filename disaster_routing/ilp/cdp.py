@@ -189,24 +189,18 @@ class ILPCDP:
                     f"DC assignment and content placement constraints (2:{r_idx}:{k})",
                 )
 
-        for r_idx, r in enumerate(inst.requests):
-            sm = lpSum(self.R_cr_d[(r.content_id, d)] for d in avail_dcs)
-            self.problem += (
-                sm >= 2,
-                f"DC assignment and content placement constraints (3.1:{r_idx})",
-            )
-            self.problem += (
-                sm <= max_paths,
-                f"DC assignment and content placement constraints (3.2:{r_idx})",
-            )
-
+        # constraints 3 and 4 not working for our model
+        # (3) implies that different paths must end with different DCs, though the
+        # DZ-disjoint constraint does not necessarily imply that
+        # (4) implies the same, so we modified that too
         for r_idx, r in enumerate(inst.requests):
             for d in avail_dcs:
-                self.problem += (
-                    lpSum(self.Lambda_k_rd[(k, r_idx, d)] for k in range(max_paths))
-                    <= self.R_cr_d[(r.content_id, d)],
-                    f"DC assignment and content placement constraints (4:{r_idx}:{d})",
-                )
+                for k in range(max_paths):
+                    self.problem += (
+                        self.Lambda_k_rd[(k, r_idx, d)]
+                        <= self.R_cr_d[(r.content_id, d)],
+                        f"DC assignment and content placement constraints (4':{r_idx}:{d}:{k})",
+                    )
 
         for r_idx, r in enumerate(inst.requests):
             for k in range(max_paths):
@@ -506,7 +500,30 @@ class ILPCDP:
                         )
 
     def solve(self) -> tuple[float, float]:
+        assert self.problem.objective is not None
         self.problem.solve()
+        log.debug(SL("ILP objective", value=self.problem.objective.value()))
+        log.debug(SL("MOFI", value=self.Delta.value()))
+
+        for r_idx, r in enumerate(self.inst.requests):
+            for k in range(self.max_paths):
+                arcs = [
+                    a
+                    for a_idx, a in enumerate(self.arcs)
+                    if self.p_k_ra[(k, r_idx, a_idx)]
+                ]
+                log.debug(
+                    SL(
+                        "ILP solution",
+                        request=r_idx,
+                        path=k,
+                        w=self.w_k_r[(k, r_idx)].value(),
+                        g=self.g_k_r[(k, r_idx)].value(),
+                        arcs=arcs,
+                        Phi=self.Phi_k_r[(k, r_idx)].value(),
+                    )
+                )
+
         return 0, 0
 
     def check_solution(
