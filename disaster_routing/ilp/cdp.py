@@ -153,7 +153,7 @@ class ILPCDP:
         }
 
         self.b_k_mr = {
-            (k, m_idx, r_idx): LpVariable(f"b^{k}_{m_idx}_{r}", cat=LpBinary)
+            (k, m_idx, r_idx): LpVariable(f"b^{k}_{m_idx}_{r_idx}", cat=LpBinary)
             for r_idx, r in enumerate(inst.requests)
             for m_idx, m in enumerate(ModulationFormat.all())
             for k in range(max_paths)
