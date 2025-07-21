@@ -488,7 +488,7 @@ class ILPCDP:
                     for k_prime in range(max_paths):
                         self.problem += (
                             self.g_k_r[(k, r_idx)]
-                            + self.Phi_k_r[(k_prime, r_idx)]
+                            + self.Phi_k_r[(k, r_idx)]
                             - self.g_k_r[(k_prime, r_idx_prime)]
                             <= M
                             * (
@@ -603,6 +603,7 @@ class ILPCDP:
             )
             for req, routes in zip(self.inst.requests, all_routes)
         )
+
         for r_idx, r in enumerate(self.inst.requests):
             for k in range(self.max_paths):
                 pi = path_idx(k, r_idx)
@@ -650,6 +651,14 @@ class ILPCDP:
                 indices.append(start_indices[idx])
                 idx += 1
             start_indices_unflattened.append(indices)
+
+        log.debug(
+            SL(
+                "Unflattened DSA results",
+                num_fses=num_fses,
+                start_indices=start_indices_unflattened,
+            )
+        )
 
         for r_idx, r in enumerate(self.inst.requests):
             for k in range(self.max_paths):
@@ -705,7 +714,7 @@ class ILPCDP:
                         )
                         set_value(
                             self.beta_kkp_rrp[(k_prime, k, r_prime_idx, r_idx)],
-                            value,
+                            1 - value,
                         )
         for r_idx, r in enumerate(self.inst.requests):
             for k in range(self.max_paths):
@@ -743,8 +752,8 @@ class ILPCDP:
                             all_routes[r_prime_idx]
                         ):
                             value = any(
-                                all_routes[r_prime_idx][pi].has_edge(edge)
-                                for edge in all_routes[r_idx][pi_prime].edges()
+                                all_routes[r_idx][pi].has_edge(edge)
+                                for edge in all_routes[r_prime_idx][pi_prime].edges()
                             )
                         set_value(
                             self.gamma_kkp_rrp[(k, k_prime, r_idx, r_prime_idx)],
@@ -846,6 +855,7 @@ class ILPCDP:
                 num_incomplete=num_incomplete,
             )
         )
+        assert num_false == 0, "Some variables are out of bounds or not binary/integer"
 
         # verify constraints
         num_true = 0
@@ -884,3 +894,4 @@ class ILPCDP:
                 num_incomplete=num_incomplete,
             )
         )
+        assert num_false == 0, "Some constraints are violated"
