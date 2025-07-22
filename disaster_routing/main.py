@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 import logging
 from random import seed
+import time
 from typing import Any, cast
 
 import hydra
@@ -84,8 +85,11 @@ def my_main(cfg: MainConfig):
     }
     log.debug(SL("Content placement", placement=content_placement))
 
-    ilp = ILPCDP(instance, dc_positions, evaluator)
+    ilp: ILPCDP | None = None
+    if cfg.ilp_solve or cfg.ilp_check:
+        ilp = ILPCDP(instance, dc_positions, evaluator)
     if cfg.ilp_solve:
+        assert ilp is not None
         _ = ilp.solve()
 
     if cfg.router is not None:
@@ -98,6 +102,8 @@ def my_main(cfg: MainConfig):
                 _recursive_=False,
             ),
         )
+
+        start = time.time()
         all_routes = router.route_instance(instance, content_placement)
         if cfg.safety_checks:
             for routes, req in zip(all_routes, instance.requests):
@@ -109,6 +115,7 @@ def my_main(cfg: MainConfig):
                 route_formats=[
                     [r.format.name for r in routes] for routes in all_routes
                 ],
+                time=time.time() - start,
             )
         )
 
@@ -134,6 +141,7 @@ def my_main(cfg: MainConfig):
             )
         )
         if cfg.ilp_check:
+            assert ilp is not None
             ilp.check_solution(all_routes, tuple(start_indices))
 
 
