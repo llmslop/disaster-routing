@@ -222,7 +222,6 @@ class SGA:
     content_placement: dict[int, list[int]]
     evaluator: FitnessEvaluator
     pop_size: int
-    max_depth: int
     cr_rate: float
     mut_rate: float
     cr_num_retries_per_req: int
@@ -235,7 +234,6 @@ class SGA:
         evaluator: FitnessEvaluator,
         content_placement: dict[int, list[int]],
         pop_size: int,
-        max_depth: int,
         cr_rate: float,
         mut_rate: float,
         cr_num_retries_per_req: int,
@@ -246,7 +244,6 @@ class SGA:
         self.content_placement = content_placement
         self.evaluator = evaluator
         self.pop_size = pop_size
-        self.max_depth = max_depth
         self.cr_rate = cr_rate
         self.mut_rate = mut_rate
         self.cr_num_retries_per_req = cr_num_retries_per_req
@@ -348,7 +345,6 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
 
     num_gens: int
     pop_size: int
-    max_depth: int
     cr_rate: float
     mut_rate: float
     cr_num_retries_per_req: int
@@ -361,7 +357,6 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
         dsa_solver: DSASolverConfig,
         num_gens: int,
         pop_size: int,
-        max_depth: int,
         cr_rate: float,
         mut_rate: float,
         cr_num_retries_per_req: int,
@@ -373,7 +368,6 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
         self.evaluator = evaluator
         self.num_gens = num_gens
         self.pop_size = pop_size
-        self.max_depth = max_depth
         self.cr_rate = cr_rate
         self.mut_rate = mut_rate
         self.cr_num_retries_per_req = cr_num_retries_per_req
@@ -389,7 +383,6 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
             FitnessEvaluator(inst, self.evaluator, self.dsa_solver),
             content_placement,
             self.pop_size,
-            self.max_depth,
             self.cr_rate,
             self.mut_rate,
             self.cr_num_retries_per_req,
