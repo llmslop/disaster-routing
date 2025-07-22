@@ -12,7 +12,8 @@ class SuccessRateStats:
         return self.successes + self.failures
 
     def mean(self) -> float:
-        return self.successes / self.total()
+        total = self.total()
+        return self.successes / total if total > 0 else 1.0
 
     def variance(self) -> float:
         if self.total() == 0:
