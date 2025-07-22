@@ -15,7 +15,6 @@ from .instances.generate import (
 from .eval.config import EvaluationConfig, register_evaluator_configs
 from .eval.evaluator import Evaluator
 from .utils.structlog import SL, color_enabled
-from .topologies.nsfnet import nsfnet
 from .routing.routing_algo import RoutingAlgorithm
 from .routing.config import RoutingAlgorithmConfig, register_routing_algo_configs
 from .conflicts.conflict_graph import ConflictGraph
