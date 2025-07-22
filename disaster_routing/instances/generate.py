@@ -8,25 +8,30 @@ from .instance import Instance
 from ..instances.request import Request
 from ..topologies.topology import Topology
 from ..topologies.topologies import get_topology
+from ..utils.ilist import ilist
 
 
 class InstanceGenerator:
     topology: Topology
+    possible_dc_positions: ilist[int]
     content_count: int
     transmission_rate_range: tuple[float, float]
 
     def __init__(
         self,
         topology: Topology,
+        possible_dc_positions: ilist[int],
         content_count: int = 10,
         transmission_rate_range: tuple[float, float] = (0, 10),
     ):
         self.topology = topology
+        self.possible_dc_positions = possible_dc_positions
         self.content_count = content_count
         self.transmission_rate_range = transmission_rate_range
 
     def gen_requests(self, n: int) -> list[Request]:
         source_nodes: set[int] = set(self.topology.graph)
+        source_nodes.difference_update(self.possible_dc_positions)
 
         sources = choices(list(source_nodes), k=n)
         contents = [randint(0, self.content_count - 1) for _ in range(n)]
@@ -47,14 +52,20 @@ class InstanceGenerator:
             for i in range(n)
         ]
 
-    def gen_instance(self, n: int) -> Instance:
-        return Instance(self.topology, self.gen_requests(n))
+    def gen_instance(self, n: int, dc_count: int) -> Instance:
+        return Instance(
+            self.topology, self.gen_requests(n), self.possible_dc_positions, dc_count
+        )
 
 
 @dataclass
 class InstanceGeneratorConfig:
     num_requests: int = 10
     topology_name: str = "nsfnet"
+    possible_dc_positions: ilist[int] = (2, 5, 6, 9, 11)
+    content_count: int = 10
+    dc_count: int = 3
+    transmission_rate_range: tuple[float, float] = (0, 10)
     path: str = "instances/temp_instance.json"
     force_recreate: bool = False
 
@@ -67,8 +78,13 @@ def load_or_gen_instance(config: InstanceGeneratorConfig) -> Instance:
             obj = cast(dict[str, object], json.load(f))
             return Instance.from_json(obj)
     except IOError:
-        generator = InstanceGenerator(get_topology(config.topology_name))
-        instance = generator.gen_instance(config.num_requests)
+        generator = InstanceGenerator(
+            get_topology(config.topology_name),
+            config.possible_dc_positions,
+            config.content_count,
+            config.transmission_rate_range,
+        )
+        instance = generator.gen_instance(config.num_requests, config.dc_count)
         with open(config.path, "w") as f:
             obj = instance.to_json()
             json.dump(obj, f)

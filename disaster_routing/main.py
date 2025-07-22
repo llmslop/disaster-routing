@@ -23,10 +23,6 @@ from .conflicts.config import DSASolverConfig, register_dsa_solver_configs
 from .conflicts.solver import DSASolver
 
 
-topology = nsfnet()
-dc_positions = [2, 5, 6, 9, 11]
-
-
 @dataclass
 class MainConfig:
     defaults: list[Any] = field(
@@ -66,15 +62,11 @@ def my_main(cfg: MainConfig):
     log.debug(SL("Running on instance", instance=cfg.instance.path))
     instance = load_or_gen_instance(cfg.instance)
     evaluator = cast(Evaluator, instantiate(cfg.eval))
-    # dc_placement = solve_dc_placement(instance, dc_positions)
+
     contents = set(req.content_id for req in instance.requests)
-    dc_placement = [list(contents) for _ in dc_positions]
     content_placement = {
-        content: [
-            dc
-            for dc, placement in zip(dc_positions, dc_placement)
-            if content in placement
-        ]
+        # TODO: properly place contents in DCs
+        content: list(instance.possible_dc_positions[: instance.dc_count])
         for content in contents
     }
     log.debug(SL("Content placement", placement=content_placement))

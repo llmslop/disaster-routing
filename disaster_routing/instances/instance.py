@@ -1,5 +1,7 @@
 from copy import deepcopy
 from typing import cast
+
+from ..utils.ilist import ilist
 from ..topologies.topology import Topology
 from .request import Request
 
@@ -7,13 +9,28 @@ from .request import Request
 class Instance:
     topology: Topology
     requests: list[Request]
+    possible_dc_positions: ilist[int]
+    dc_count: int
 
-    def __init__(self, topology: Topology, requests: list[Request]):
+    def __init__(
+        self,
+        topology: Topology,
+        requests: list[Request],
+        possible_dc_positions: ilist[int],
+        dc_count: int,
+    ):
         self.topology = topology
         self.requests = requests
+        self.possible_dc_positions = possible_dc_positions
+        self.dc_count = dc_count
 
     def copy(self) -> "Instance":
-        return Instance(self.topology.copy(), deepcopy(self.requests))
+        return Instance(
+            self.topology.copy(),
+            deepcopy(self.requests),
+            self.possible_dc_positions,
+            self.dc_count,
+        )
 
     def remove_edge(self, edge: tuple[int, int]) -> "Instance":
         inst = self.copy()
@@ -30,10 +47,14 @@ class Instance:
                 Request.from_json(req)
                 for req in cast(list[dict[str, object]], json["requests"])
             ],
+            ilist[int](cast(list[int], json["possible_dc_positions"])),
+            cast(int, json["dc_count"]),
         )
 
     def to_json(self):
         return {
             "topology": self.topology.to_json(),
             "requests": [req.to_json() for req in self.requests],
+            "possible_dc_positions": list(self.possible_dc_positions),
+            "dc_count": self.dc_count,
         }
