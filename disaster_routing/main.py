@@ -39,7 +39,7 @@ class MainConfig:
     instance: InstanceGeneratorConfig = field(default_factory=InstanceGeneratorConfig)
     eval: EvaluationConfig = MISSING
     safety_checks: bool = True
-    ilp_check: bool = True
+    ilp_check: bool | None = None
     random_seed: int = 42
     ilp_solve: bool = False
 
@@ -65,6 +65,11 @@ def my_main(cfg: MainConfig):
 
     log.debug(SL("Running on instance", instance=cfg.instance.path))
     instance = load_or_gen_instance(cfg.instance)
+
+    if cfg.ilp_check is None:
+        # skip ILP check for large topologies to avoid OOM
+        cfg.ilp_check = len(instance.topology.graph.nodes) <= 20
+
     log.debug(SL("Instance info", instance=instance.to_json()))
     evaluator = cast(Evaluator, instantiate(cfg.eval))
 
@@ -78,7 +83,7 @@ def my_main(cfg: MainConfig):
 
     ilp: ILPCDP | None = None
     if cfg.ilp_solve or cfg.ilp_check:
-        ilp = ILPCDP(instance, dc_positions, evaluator)
+        ilp = ILPCDP(instance, evaluator)
     if cfg.ilp_solve:
         assert ilp is not None
         _ = ilp.solve()

@@ -25,11 +25,12 @@ log = logging.getLogger(__name__)
 
 @final
 class ILPCDP:
-    def __init__(
-        self, inst: Instance, avail_dcs: list[int], evaluator: Evaluator
-    ) -> None:
+    def __init__(self, inst: Instance, evaluator: Evaluator) -> None:
         S = 100
-        max_paths = len(avail_dcs)
+        max_paths = [
+            int(inst.topology.graph.in_degree[req.source]) for req in inst.requests
+        ]
+
         self.max_paths = max_paths
 
         log.debug(SL("Construct ILP for CDP"))
@@ -40,6 +41,7 @@ class ILPCDP:
         ]
 
         self.inst = inst
+        avail_dcs = inst.possible_dc_positions
         self.avail_dcs = avail_dcs
         self.arcs = arcs
 
@@ -47,21 +49,21 @@ class ILPCDP:
             (k, r_idx, a_idx): LpVariable(f"p^{k}_{r_idx}_{a_idx}", cat=LpBinary)
             for r_idx, _ in enumerate(inst.requests)
             for a_idx, _ in enumerate(arcs)
-            for k in range(max_paths)
+            for k in range(max_paths[r_idx])
         }
 
         self.Lambda_k_rd = {
             (k, r_idx, d): LpVariable(f"Λ^{k}_{r_idx}_{d}", cat=LpBinary)
             for r_idx, _ in enumerate(inst.requests)
             for d in avail_dcs
-            for k in range(max_paths)
+            for k in range(max_paths[r_idx])
         }
 
         self.alpha_k_rz = {
             (k, r_idx, z_idx): LpVariable(f"α^{k}_{r_idx}_{z_idx}", cat=LpBinary)
             for r_idx, _ in enumerate(inst.requests)
             for z_idx, _ in enumerate(inst.topology.dzs)
-            for k in range(max_paths)
+            for k in range(max_paths[r_idx])
         }
 
         contents = list({req.content_id for req in inst.requests})
@@ -78,19 +80,19 @@ class ILPCDP:
             )
             for r_idx, r in enumerate(inst.requests)
             for m_idx, m in enumerate(ModulationFormat.all())
-            for k in range(max_paths)
+            for k in range(max_paths[r_idx])
         }
 
         self.w_k_r = {
             (k, r_idx): LpVariable(f"w^{k}_{r_idx}", cat=LpBinary)
             for r_idx, _ in enumerate(inst.requests)
-            for k in range(max_paths)
+            for k in range(max_paths[r_idx])
         }
 
         self.xi_i_r = {
             (i, r_idx): LpVariable(f"ξ^{i}_{r_idx}", cat=LpBinary)
             for r_idx, _ in enumerate(inst.requests)
-            for i in range(1, max_paths)
+            for i in range(1, max_paths[r_idx])
         }
 
         self.Phi_k_ra = {
@@ -99,7 +101,7 @@ class ILPCDP:
             )
             for r_idx, _ in enumerate(inst.requests)
             for a_idx, _ in enumerate(arcs)
-            for k in range(max_paths)
+            for k in range(max_paths[r_idx])
         }
 
         self.Phi_k_r = {
@@ -107,7 +109,7 @@ class ILPCDP:
                 f"Φ^{k}_{r_idx}", cat=LpInteger, lowBound=0, upBound=S
             )
             for r_idx, _ in enumerate(inst.requests)
-            for k in range(max_paths)
+            for k in range(max_paths[r_idx])
         }
 
         self.g_k_r = {
@@ -115,14 +117,14 @@ class ILPCDP:
                 f"g^{k}_{r_idx}", cat=LpInteger, lowBound=0, upBound=S - 1
             )
             for r_idx, _ in enumerate(inst.requests)
-            for k in range(max_paths)
+            for k in range(max_paths[r_idx])
         }
 
         self.beta_kkp_r = {
             (k, k_prime, r_idx): LpVariable(f"β^{k}^{k_prime}_{r_idx}", cat=LpBinary)
             for r_idx, _ in enumerate(inst.requests)
-            for k in range(max_paths)
-            for k_prime in range(max_paths)
+            for k in range(max_paths[r_idx])
+            for k_prime in range(max_paths[r_idx])
         }
 
         self.beta_kkp_rrp: dict[tuple[int, int, int, int], LpVariable] = {
@@ -131,15 +133,15 @@ class ILPCDP:
             )
             for r_idx, _ in enumerate(inst.requests)
             for r_idx_prime, _ in enumerate(inst.requests)
-            for k in range(max_paths)
-            for k_prime in range(max_paths)
+            for k in range(max_paths[r_idx])
+            for k_prime in range(max_paths[r_idx_prime])
         }
 
         self.gamma_kkp_r = {
             (k, k_prime, r_idx): LpVariable(f"γ^{k}^{k_prime}_{r_idx}", cat=LpBinary)
             for r_idx, _ in enumerate(inst.requests)
-            for k in range(max_paths)
-            for k_prime in range(max_paths)
+            for k in range(max_paths[r_idx])
+            for k_prime in range(max_paths[r_idx])
         }
 
         self.gamma_kkp_rrp = {
@@ -149,15 +151,19 @@ class ILPCDP:
             for r_idx, _ in enumerate(inst.requests)
             for r_idx_prime, _ in enumerate(inst.requests)
             if r_idx != r_idx_prime
-            for k in range(max_paths)
-            for k_prime in range(max_paths)
+            for k in range(max_paths[r_idx])
+            for k_prime in range(max_paths[r_idx_prime])
         }
 
         self.b_k_mr = {
             (k, m_idx, r_idx): LpVariable(f"b^{k}_{m_idx}_{r_idx}", cat=LpBinary)
             for r_idx, r in enumerate(inst.requests)
             for m_idx, m in enumerate(ModulationFormat.all())
-            for k in range(max_paths)
+            for k in range(max_paths[r_idx])
+        }
+
+        self.theta_d = {
+            d: LpVariable(f"θ_{d}", cat=LpBinary) for d in inst.possible_dc_positions
         }
 
         self.Delta = LpVariable("Δ", cat=LpInteger, lowBound=0, upBound=S)
@@ -174,36 +180,63 @@ class ILPCDP:
             self.Phi_k_ra[k, r_idx, a_idx]
             for r_idx, _ in enumerate(inst.requests)
             for a_idx, _ in enumerate(arcs)
-            for k in range(max_paths)
+            for k in range(max_paths[r_idx])
         )
 
         self.problem += (theta_1 * total_fs + theta_2 * self.Delta, "Objective")
 
         # constraints
+        self.problem += (
+            lpSum(self.theta_d[d] for d in inst.possible_dc_positions) <= inst.dc_count,
+            "DC count constraint (0.1)",
+        )
+
+        for d in inst.possible_dc_positions:
+            for cr in contents:
+                self.problem += (
+                    self.R_cr_d[(cr, d)] <= self.theta_d[d],
+                    f"DC count constraint (0.2:{cr}:{d}",
+                )
 
         for r_idx, r in enumerate(inst.requests):
-            for k in range(max_paths):
+            for k in range(max_paths[r_idx]):
                 self.problem += (
                     lpSum(self.Lambda_k_rd[(k, r_idx, d)] for d in avail_dcs)
                     == self.w_k_r[(k, r_idx)],
                     f"DC assignment and content placement constraints (2:{r_idx}:{k})",
                 )
 
-        # constraints 3 and 4 not working for our model
-        # (3) implies that different paths must end with different DCs, though the
-        # DZ-disjoint constraint does not necessarily imply that
-        # (4) implies the same, so we modified that too
         for r_idx, r in enumerate(inst.requests):
-            for d in avail_dcs:
-                for k in range(max_paths):
-                    self.problem += (
-                        self.Lambda_k_rd[(k, r_idx, d)]
-                        <= self.R_cr_d[(r.content_id, d)],
-                        f"DC assignment and content placement constraints (4':{r_idx}:{d}:{k})",
-                    )
+            sm = lpSum(self.R_cr_d[(r.content_id, d)] for d in avail_dcs)
+            self.problem += (
+                sm >= 2,
+                f"DC assignment and content placement constraints (3.1:{r_idx})",
+            )
+            self.problem += (
+                sm <= max_paths[r_idx],
+                f"DC assignment and content placement constraints (3.2:{r_idx})",
+            )
 
         for r_idx, r in enumerate(inst.requests):
-            for k in range(max_paths):
+            for d in avail_dcs:
+                self.problem += (
+                    lpSum(
+                        self.Lambda_k_rd[(k, r_idx, d)] for k in range(max_paths[r_idx])
+                    )
+                    <= self.R_cr_d[(r.content_id, d)],
+                    f"DC assignment and content placement constraints (4:{r_idx}:{d})",
+                )
+        # for r_idx, r in enumerate(inst.requests):
+        #     for d in avail_dcs:
+        #         for k in range(max_paths[r_idx]):
+        #             self.problem += (
+        #                 self.Lambda_k_rd[(k, r_idx, d)]
+        #                 <= self.R_cr_d[(r.content_id, d)],
+        #                 f"DC assignment and content placement constraints (4':{r_idx}:{d}:{k})",
+        #             )
+
+        for r_idx, r in enumerate(inst.requests):
+            for k in range(max_paths[r_idx]):
                 for v in inst.topology.graph.nodes:
                     Psi_v_plus = {i for i, a in enumerate(arcs) if a[0] == v}
                     Psi_v_minus = {i for i, a in enumerate(arcs) if a[1] == v}
@@ -236,7 +269,7 @@ class ILPCDP:
 
         for r_idx, r in enumerate(inst.requests):
             for z_idx, _ in enumerate(inst.topology.dzs):
-                for k in range(max_paths):
+                for k in range(max_paths[r_idx]):
                     self.problem += (
                         lpSum(
                             self.p_k_ra[(k, r_idx, a_idx)] for a_idx in dz_arcs[z_idx]
@@ -247,7 +280,7 @@ class ILPCDP:
 
         for r_idx, r in enumerate(inst.requests):
             for z_idx, _ in enumerate(inst.topology.dzs):
-                for k in range(max_paths):
+                for k in range(max_paths[r_idx]):
                     for a_idx in dz_arcs[z_idx]:
                         self.problem += (
                             self.alpha_k_rz[(k, r_idx, z_idx)]
@@ -256,7 +289,7 @@ class ILPCDP:
                         )
 
         for r_idx, r in enumerate(inst.requests):
-            for k in range(max_paths):
+            for k in range(max_paths[r_idx]):
                 for z_idx, z in enumerate(inst.topology.dzs):
                     if r.source in z.nodes:
                         continue
@@ -266,7 +299,7 @@ class ILPCDP:
                     )
 
         for r_idx, r in enumerate(inst.requests):
-            for k in range(max_paths):
+            for k in range(max_paths[r_idx]):
                 for m_idx, m in enumerate(ModulationFormat.all()):
                     self.problem += (
                         lpSum(
@@ -280,7 +313,7 @@ class ILPCDP:
                     )
 
         for r_idx, r in enumerate(inst.requests):
-            for k in range(max_paths):
+            for k in range(max_paths[r_idx]):
                 self.problem += (
                     lpSum(
                         self.b_k_mr[(k, m_idx, r_idx)]
@@ -291,7 +324,7 @@ class ILPCDP:
                 )
 
         for r_idx, r in enumerate(inst.requests):
-            for k in range(max_paths):
+            for k in range(max_paths[r_idx]):
                 self.problem += (
                     lpSum(
                         self.Phi_k_rm[(k, r_idx, m_idx)]
@@ -302,7 +335,7 @@ class ILPCDP:
                 )
 
         for r_idx, r in enumerate(inst.requests):
-            for k in range(max_paths):
+            for k in range(max_paths[r_idx]):
                 for m_idx, m in enumerate(ModulationFormat.all()):
                     self.problem += (
                         self.Phi_k_rm[(k, r_idx, m_idx)]
@@ -311,7 +344,7 @@ class ILPCDP:
                     )
 
         for r_idx, r in enumerate(inst.requests):
-            for k in range(max_paths):
+            for k in range(max_paths[r_idx]):
                 for a_idx, a in enumerate(arcs):
                     self.problem += (
                         self.p_k_ra[(k, r_idx, a_idx)] <= self.w_k_r[(k, r_idx)],
@@ -319,13 +352,15 @@ class ILPCDP:
                     )
         for r_idx, r in enumerate(inst.requests):
             self.problem += (
-                lpSum(self.w_k_r[(k, r_idx)] for k in range(max_paths - 1))
-                == lpSum(k * self.xi_i_r[(k, r_idx)] for k in range(1, max_paths)),
+                lpSum(self.w_k_r[(k, r_idx)] for k in range(max_paths[r_idx] - 1))
+                == lpSum(
+                    k * self.xi_i_r[(k, r_idx)] for k in range(1, max_paths[r_idx])
+                ),
                 f"Adaptive multi-path routing constraints (14:{r_idx})",
             )
         for r_idx, r in enumerate(inst.requests):
             self.problem += (
-                lpSum(self.xi_i_r[(k, r_idx)] for k in range(1, max_paths)) <= 1,
+                lpSum(self.xi_i_r[(k, r_idx)] for k in range(1, max_paths[r_idx])) <= 1,
                 f"Adaptive multi-path routing constraints (15:{r_idx})",
             )
         for r_idx, r in enumerate(inst.requests):
@@ -334,17 +369,17 @@ class ILPCDP:
                 f"Adaptive multi-path routing constraints (16.1:{r_idx})",
             )
             self.problem += (
-                self.w_k_r[max_paths - 1, r_idx] == 1,
+                self.w_k_r[max_paths[r_idx] - 1, r_idx] == 1,
                 f"Adaptive multi-path routing constraints (16.2:{r_idx})",
             )
-            for k in range(max_paths - 2):
+            for k in range(max_paths[r_idx] - 2):
                 self.problem += (
                     self.w_k_r[(k, r_idx)] >= self.w_k_r[(k + 1, r_idx)],
                     f"Adaptive multi-path routing constraints (17:{r_idx}:{k})",
                 )
 
         for r_idx, r in enumerate(inst.requests):
-            for k in range(max_paths):
+            for k in range(max_paths[r_idx]):
                 self.problem += (
                     lpSum(
                         self.Phi_k_rm[(k, r_idx, m_idx)] * m.relative_bpsk_rate()
@@ -352,12 +387,14 @@ class ILPCDP:
                     )
                     + (1 - self.w_k_r[(k, r_idx)]) * r.bpsk_fs_count
                     >= r.bpsk_fs_count
-                    * lpSum(self.xi_i_r[(k, r_idx)] / k for k in range(1, max_paths)),
+                    * lpSum(
+                        self.xi_i_r[(k, r_idx)] / k for k in range(1, max_paths[r_idx])
+                    ),
                     f"Modulation adaption constraints (18:{r_idx}:{k})",
                 )
 
         for r_idx, r in enumerate(inst.requests):
-            for k in range(max_paths):
+            for k in range(max_paths[r_idx]):
                 for a_idx, a in enumerate(arcs):
                     self.problem += (
                         self.Phi_k_ra[(k, r_idx, a_idx)]
@@ -366,7 +403,7 @@ class ILPCDP:
                     )
 
         for r_idx, r in enumerate(inst.requests):
-            for k in range(max_paths):
+            for k in range(max_paths[r_idx]):
                 for a_idx, _ in enumerate(arcs):
                     self.problem += (
                         self.Phi_k_ra[(k, r_idx, a_idx)] <= self.Phi_k_r[(k, r_idx)],
@@ -374,7 +411,7 @@ class ILPCDP:
                     )
 
         for r_idx, r in enumerate(inst.requests):
-            for k in range(max_paths):
+            for k in range(max_paths[r_idx]):
                 for a_idx, a in enumerate(arcs):
                     self.problem += (
                         self.Phi_k_ra[(k, r_idx, a_idx)]
@@ -385,8 +422,8 @@ class ILPCDP:
 
         for r_idx, r in enumerate(inst.requests):
             for a_idx, _ in enumerate(arcs):
-                for k in range(max_paths):
-                    for k_prime in range(max_paths):
+                for k in range(max_paths[r_idx]):
+                    for k_prime in range(max_paths[r_idx]):
                         if k <= k_prime:
                             continue
                         self.problem += (
@@ -397,8 +434,8 @@ class ILPCDP:
                             f"Spectrum allocation constraints (22:{r_idx}:{k}:{k_prime}:{a_idx})",
                         )
         for r_idx, r in enumerate(inst.requests):
-            for k in range(max_paths):
-                for k_prime in range(max_paths):
+            for k in range(max_paths[r_idx]):
+                for k_prime in range(max_paths[r_idx]):
                     if k <= k_prime:
                         continue
                     self.problem += (
@@ -411,8 +448,8 @@ class ILPCDP:
                 if r_idx >= r_prime_idx:
                     continue
                 for a_idx, _ in enumerate(arcs):
-                    for k in range(max_paths):
-                        for k_prime in range(max_paths):
+                    for k in range(max_paths[r_idx]):
+                        for k_prime in range(max_paths[r_prime_idx]):
                             self.problem += (
                                 self.p_k_ra[(k, r_idx, a_idx)]
                                 + self.p_k_ra[(k_prime, r_prime_idx, a_idx)]
@@ -424,8 +461,8 @@ class ILPCDP:
             for r_idx_prime, _ in enumerate(inst.requests):
                 if r_idx >= r_idx_prime:
                     continue
-                for k in range(max_paths):
-                    for k_prime in range(max_paths):
+                for k in range(max_paths[r_idx]):
+                    for k_prime in range(max_paths[r_idx_prime]):
                         self.problem += (
                             self.gamma_kkp_rrp[(k, k_prime, r_idx, r_idx_prime)]
                             == self.gamma_kkp_rrp[(k_prime, k, r_idx_prime, r_idx)],
@@ -433,8 +470,8 @@ class ILPCDP:
                         )
 
         for r_idx, r in enumerate(inst.requests):
-            for k in range(max_paths):
-                for k_prime in range(max_paths):
+            for k in range(max_paths[r_idx]):
+                for k_prime in range(max_paths[r_idx]):
                     if k <= k_prime:
                         continue
                     self.problem += (
@@ -447,8 +484,8 @@ class ILPCDP:
             for r_prime_idx, _ in enumerate(inst.requests):
                 if r_idx <= r_prime_idx:
                     continue
-                for k in range(max_paths):
-                    for k_prime in range(max_paths):
+                for k in range(max_paths[r_idx]):
+                    for k_prime in range(max_paths[r_prime_idx]):
                         self.problem += (
                             self.beta_kkp_rrp[(k, k_prime, r_idx, r_prime_idx)]
                             + self.beta_kkp_rrp[(k_prime, k, r_prime_idx, r_idx)]
@@ -456,7 +493,7 @@ class ILPCDP:
                             f"Spectrum allocation constraints (27:{r_idx}:{r_prime_idx}:{k}:{k_prime})",
                         )
         for r_idx, r in enumerate(inst.requests):
-            for k in range(max_paths):
+            for k in range(max_paths[r_idx]):
                 self.problem += (
                     self.g_k_r[(k, r_idx)] + self.Phi_k_r[(k, r_idx)] <= self.Delta,
                     f"Spectrum allocation constraints (28:{r_idx}:{k})",
@@ -464,8 +501,8 @@ class ILPCDP:
 
         M = int(1e6)
         for r_idx, r in enumerate(inst.requests):
-            for k in range(max_paths):
-                for k_prime in range(max_paths):
+            for k in range(max_paths[r_idx]):
+                for k_prime in range(max_paths[r_idx]):
                     if k == k_prime:
                         continue
                     self.problem += (
@@ -484,8 +521,8 @@ class ILPCDP:
             for r_idx_prime, r_prime in enumerate(inst.requests):
                 if r_idx == r_idx_prime:
                     continue
-                for k in range(max_paths):
-                    for k_prime in range(max_paths):
+                for k in range(max_paths[r_idx]):
+                    for k_prime in range(max_paths[r_idx_prime]):
                         self.problem += (
                             self.g_k_r[(k, r_idx)]
                             + self.Phi_k_r[(k, r_idx)]
@@ -506,7 +543,7 @@ class ILPCDP:
         log.debug(SL("MOFI", value=self.Delta.value()))
 
         for r_idx, r in enumerate(self.inst.requests):
-            for k in range(self.max_paths):
+            for k in range(self.max_paths[r_idx]):
                 arcs = [
                     a
                     for a_idx, a in enumerate(self.arcs)
@@ -543,7 +580,7 @@ class ILPCDP:
             return values[v.name]
 
         def path_idx(k: int, r_idx: int) -> int:
-            return len(all_routes) - 1 if k == self.max_paths - 1 else k
+            return len(all_routes) - 1 if k == self.max_paths[r_idx] - 1 else k
 
         arcs: list[tuple[int, int, int]] = [
             (u, v, self.inst.topology.graph.edges[u, v]["weight"])
@@ -551,7 +588,7 @@ class ILPCDP:
         ]
 
         for r_idx, r in enumerate(self.inst.requests):
-            for k in range(self.max_paths):
+            for k in range(self.max_paths[r_idx]):
                 pi = path_idx(k, r_idx)
                 for a_idx, a in enumerate(arcs):
                     set_value(
@@ -560,7 +597,7 @@ class ILPCDP:
                         and all_routes[r_idx][pi].has_edge(a[:2]),
                     )
         for r_idx, r in enumerate(self.inst.requests):
-            for k in range(self.max_paths):
+            for k in range(self.max_paths[r_idx]):
                 pi = path_idx(k, r_idx)
                 for d in self.avail_dcs:
                     set_value(
@@ -569,7 +606,7 @@ class ILPCDP:
                         and all_routes[r_idx][pi].node_list[-1] == d,
                     )
         for r_idx, r in enumerate(self.inst.requests):
-            for k in range(self.max_paths):
+            for k in range(self.max_paths[r_idx]):
                 pi = path_idx(k, r_idx)
                 for z_idx, z in enumerate(self.inst.topology.dzs):
                     set_value(
@@ -605,7 +642,7 @@ class ILPCDP:
         )
 
         for r_idx, r in enumerate(self.inst.requests):
-            for k in range(self.max_paths):
+            for k in range(self.max_paths[r_idx]):
                 pi = path_idx(k, r_idx)
                 for m_idx, m in enumerate(ModulationFormat.all()):
                     set_value(
@@ -616,16 +653,16 @@ class ILPCDP:
                         else 0,
                     )
         for r_idx, r in enumerate(self.inst.requests):
-            for k in range(self.max_paths):
+            for k in range(self.max_paths[r_idx]):
                 set_value(
                     self.w_k_r[(k, r_idx)],
                     len(all_routes[r_idx]) > path_idx(k, r_idx),
                 )
         for r_idx, r in enumerate(self.inst.requests):
-            for i in range(1, self.max_paths):
+            for i in range(1, self.max_paths[r_idx]):
                 set_value(self.xi_i_r[(i, r_idx)], len(all_routes[r_idx]) == i + 1)
         for r_idx, r in enumerate(self.inst.requests):
-            for k in range(self.max_paths):
+            for k in range(self.max_paths[r_idx]):
                 pi = path_idx(k, r_idx)
                 for a_idx, a in enumerate(arcs):
                     set_value(
@@ -636,7 +673,7 @@ class ILPCDP:
                         else 0,
                     )
         for r_idx, r in enumerate(self.inst.requests):
-            for k in range(self.max_paths):
+            for k in range(self.max_paths[r_idx]):
                 pi = path_idx(k, r_idx)
                 set_value(
                     self.Phi_k_r[(k, r_idx)],
@@ -661,7 +698,7 @@ class ILPCDP:
         )
 
         for r_idx, r in enumerate(self.inst.requests):
-            for k in range(self.max_paths):
+            for k in range(self.max_paths[r_idx]):
                 pi = path_idx(k, r_idx)
                 set_value(
                     self.g_k_r[(k, r_idx)],
@@ -670,8 +707,8 @@ class ILPCDP:
                     else 0,
                 )
         for r_idx, r in enumerate(self.inst.requests):
-            for k in range(self.max_paths):
-                for k_prime in range(self.max_paths):
+            for k in range(self.max_paths[r_idx]):
+                for k_prime in range(self.max_paths[r_idx]):
                     if k >= k_prime:
                         continue
                     pi = path_idx(k, r_idx)
@@ -696,8 +733,8 @@ class ILPCDP:
             for r_prime_idx, r_prime in enumerate(self.inst.requests):
                 if r_idx >= r_prime_idx:
                     continue
-                for k in range(self.max_paths):
-                    for k_prime in range(self.max_paths):
+                for k in range(self.max_paths[r_idx]):
+                    for k_prime in range(self.max_paths[r_prime_idx]):
                         pi = path_idx(k, r_idx)
                         pi_prime = path_idx(k_prime, r_prime_idx)
                         value = 0
@@ -717,8 +754,8 @@ class ILPCDP:
                             1 - value,
                         )
         for r_idx, r in enumerate(self.inst.requests):
-            for k in range(self.max_paths):
-                for k_prime in range(self.max_paths):
+            for k in range(self.max_paths[r_idx]):
+                for k_prime in range(self.max_paths[r_idx]):
                     if k >= k_prime:
                         continue
                     pi = path_idx(k, r_idx)
@@ -743,8 +780,8 @@ class ILPCDP:
             for r_prime_idx, r_prime in enumerate(self.inst.requests):
                 if r_idx >= r_prime_idx:
                     continue
-                for k in range(self.max_paths):
-                    for k_prime in range(self.max_paths):
+                for k in range(self.max_paths[r_idx]):
+                    for k_prime in range(self.max_paths[r_prime_idx]):
                         pi = path_idx(k, r_idx)
                         pi_prime = path_idx(k_prime, r_prime_idx)
                         value = 0
@@ -764,7 +801,7 @@ class ILPCDP:
                             value,
                         )
         for r_idx, r in enumerate(self.inst.requests):
-            for k in range(self.max_paths):
+            for k in range(self.max_paths[r_idx]):
                 pi = path_idx(k, r_idx)
                 for m_idx, m in enumerate(ModulationFormat.all()):
                     set_value(
