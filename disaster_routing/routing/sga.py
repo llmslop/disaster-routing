@@ -19,7 +19,7 @@ from ..utils.structlog import SL
 from ..utils.ilist import ilist
 from .routing_algo import InfeasibleRouteError, Route, RoutingAlgorithm
 from .ndt import NodeDepthTree
-from .flow import FlowRoutingAlgorithm, reconstruct_min_hop_path
+from .flow import reconstruct_min_hop_path
 
 log = logging.getLogger(__name__)
 
