@@ -41,7 +41,7 @@ class ILPCDP:
         ]
 
         self.inst = inst
-        avail_dcs = inst.possible_dc_positions[: inst.dc_count]
+        avail_dcs = inst.possible_dc_positions
         self.avail_dcs = avail_dcs
         self.arcs = arcs
 
