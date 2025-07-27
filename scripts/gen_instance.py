@@ -27,6 +27,7 @@ for topology, dc_pos in topologies.items():
                 + f"instance.possible_dc_positions=[{','.join(map(str, dc_pos))}] "
                 + f"instance.num_requests={size} "
                 + f"instance.topology_name={topology} "
+                + "random_seed=null "
             )
             code = os.system(cmd)
             if code != 0:

@@ -1,4 +1,4 @@
-name: Run on test instances
+name: Run on large test instances (1)
 
 on:
   push:
@@ -17,8 +17,8 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Run algorithm on test instances
-        run: scripts/run_all.sh --pattern=".json$" +router=greedy,flow,greedy+ls,flow+ls,sga
+      - name: Run algorithm on large test instances
+        run: scripts/run_all.sh --pattern="0100-0" +router=greedy,flow,greedy+ls,flow+ls,sga
 
       - name: Process results
         run: mkdir multirun/results && uv run scripts/collect_logs.py multirun | uv run scripts/process_results.py > multirun/results/processed.xlsx
@@ -29,4 +29,3 @@ jobs:
           name: log
           path: multirun
           include-hidden-files: true
-

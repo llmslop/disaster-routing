@@ -40,8 +40,8 @@ class MainConfig:
     eval: EvaluationConfig = MISSING
     safety_checks: bool = True
     ilp_check: bool | None = None
-    random_seed: int = 42
     ilp_solve: bool = False
+    random_seed: int | None = 42
 
 
 OmegaConf.register_new_resolver(
@@ -61,7 +61,8 @@ log = logging.getLogger(__name__)
 @hydra.main(version_base=None, config_path="conf", config_name="default")
 def my_main(cfg: MainConfig):
     log.debug(SL("RNG seed", seed=cfg.random_seed))
-    seed(cfg.random_seed)
+    if cfg.random_seed is not None:
+        seed(cfg.random_seed)
 
     log.debug(SL("Running on instance", instance=cfg.instance.path))
     instance = load_or_gen_instance(cfg.instance)
