@@ -11,7 +11,7 @@ class EvaluationConfig:
 @dataclass
 class WeightedSumEvaluationConfig(EvaluationConfig):
     _target_: str = "disaster_routing.eval.weighted_sum.WeightedSumEvaluator"
-    total_fs_weight: float = 0.5
+    total_fs_weight: float = 0.2
     mofi_weight: float = float("nan")
 
 
