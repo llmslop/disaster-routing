@@ -13,14 +13,47 @@ from ..eval.evaluator import Evaluator
 from ..instances.instance import Instance
 from ..instances.request import Request
 from ..topologies.topology import Topology
+from ..topologies.graphs import Graph
 from ..utils.success_stats import SuccessRateStats
 from ..utils.structlog import SL
 from ..utils.ilist import ilist
 from .routing_algo import InfeasibleRouteError, Route, RoutingAlgorithm
 from .ndt import NodeDepthTree
-from .flow import FlowRoutingAlgorithm, reconstruct_min_hop_path
+from .flow import reconstruct_min_hop_path
 
 log = logging.getLogger(__name__)
+
+
+def randomized_dfs(
+    graph: Graph,
+    start: int,
+    end: int,
+    visited: set[int] | None = None,
+    path: list[int] | None = None,
+) -> list[int] | None:
+    if visited is None:
+        visited = set()
+    if path is None:
+        path = []
+
+    visited.add(start)
+    path.append(start)
+
+    if start == end:
+        return path.copy()
+
+    neighbors = list(graph.adj[start])
+    random.shuffle(neighbors)
+
+    for neighbor in neighbors:
+        if neighbor not in visited:
+            result = randomized_dfs(graph, neighbor, end, visited, path)
+            if result is not None:
+                return result
+
+    _ = path.pop()
+    visited.remove(start)
+    return None
 
 
 class FitnessEvaluator:
@@ -174,11 +207,23 @@ class Individual:
 
     @staticmethod
     def random(inst: Instance, content_placement: dict[int, list[int]]) -> "Individual":
-        generator = FlowRoutingAlgorithm()
-        inst = Individual.clone_instance(inst)
-        base = Individual(generator.route_instance(inst, content_placement))
-        mut = base.mutate(inst, content_placement, 0.5, 10)
-        return base if mut is None else mut
+        all_routes: list[ilist[Route]] = [() for _ in inst.requests]
+        num_retries = 0
+        for k, req in enumerate(inst.requests):
+            while True:
+                all_routes[k] = ()
+                while True:
+                    route = Individual.generate_new_route(
+                        inst, req, all_routes[k], content_placement
+                    )
+                    num_retries += 1
+                    if route is None:
+                        break
+                    all_routes[k] = all_routes[k] + (route,)
+                if len(all_routes[k]) >= 2:
+                    break
+        log.debug(SL("Finished generating random individual", num_retries=num_retries))
+        return Individual(tuple(all_routes))
 
     def crossover(
         self,
@@ -192,6 +237,30 @@ class Individual:
             all_routes.append(random.choice([r1, r2]))
         return Individual(tuple(all_routes))
 
+    @staticmethod
+    def generate_new_route(
+        inst: Instance,
+        req: Request,
+        routes: ilist[Route],
+        content_placement: dict[int, list[int]],
+    ) -> Route | None:
+        topology = inst.topology.copy()
+        for dz in topology.dzs:
+            if (
+                any(dz.affects_path(route.node_list) for route in routes)
+                and req.source not in dz.nodes
+            ):
+                dz.remove_from_graph(topology.graph)
+        for dc in content_placement[req.content_id]:
+            route = randomized_dfs(topology.graph, req.source, dc)
+            if route is None:
+                continue
+            try:
+                return Route(inst.topology, ilist[int](route))
+            except InfeasibleRouteError:
+                pass
+        return None
+
     def mutate(
         self,
         inst: Instance,
@@ -200,18 +269,55 @@ class Individual:
         num_retries_per_req: int,
     ) -> "Individual | None":
         try:
-            all_routes: list[ilist[Route]] = []
-            k = random.choice(range(len(self.all_routes)))
+            all_routes: list[ilist[Route]] = list(self.all_routes)
+            k = random.choice(range(len(all_routes)))
 
-            edges = [e for e in inst.topology.graph.edges]
-            inst = inst.remove_edge(random.choice(edges))
-            new_route = FlowRoutingAlgorithm().route_request(
-                inst.requests[k],
-                inst.topology,
-                content_placement[inst.requests[k].content_id],
+            chances = {
+                "new": 1,
+                "reroute": 1,
+                "prune": 1,
+            }
+
+            if len(all_routes[k]) <= 2:
+                del chances["prune"]
+
+            # try to generate new route
+            new_route = Individual.generate_new_route(
+                inst, inst.requests[k], all_routes[k], content_placement
             )
-            for i, route in enumerate(self.all_routes):
-                all_routes.append(new_route if i == k else route)
+            if new_route is None:
+                del chances["new"]
+
+            choices = list(chances.keys())
+            chances = [float(chances[c]) for c in choices]
+            match random.choices(choices, weights=chances)[0]:
+                case "new":
+                    assert new_route is not None
+                    all_routes[k] = all_routes[k] + (new_route,)
+                case "reroute":
+                    routes: ilist[Route] = ()
+                    for _ in range(num_retries_per_req):
+                        while True:
+                            route = Individual.generate_new_route(
+                                inst, inst.requests[k], routes, content_placement
+                            )
+                            if route is None or random.random() < 0.25:
+                                break
+                            routes = routes + (route,)
+                        if len(routes) < 2:
+                            routes = ()
+                            continue
+                    if len(routes) < 2:
+                        return None
+                    all_routes[k] = routes
+                case "prune":
+                    route_list = list(all_routes[k])
+                    _ = route_list.pop(random.randint(0, len(route_list) - 1))
+                    all_routes[k] = ilist[Route](route_list)
+                    assert len(all_routes[k]) >= 2
+                case _:
+                    return None
+
             return Individual(tuple(all_routes))
         except InfeasibleRouteError:
             return None
@@ -252,6 +358,7 @@ class SGA:
         self.cr_num_retries_per_req = cr_num_retries_per_req
         self.mut_num_retries_per_req = mut_num_retries_per_req
         self.elitism_rate = elitism_rate
+        log.debug("Generating initial population...")
         self.population: list[Individual] = [
             Individual.random(inst, content_placement) for _ in range(pop_size)
         ]

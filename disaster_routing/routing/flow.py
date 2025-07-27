@@ -179,7 +179,7 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                         best_route_set_cost = cost
             except nx.NetworkXUnfeasible:
                 break
-            except AssertionError:
+            except InfeasibleRouteError:
                 pass
 
         if best_route_set is None:

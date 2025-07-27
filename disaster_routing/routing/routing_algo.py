@@ -33,7 +33,8 @@ class Route:
             if format is None
             else format
         )
-        assert format is not None
+        if format is None:
+            raise InfeasibleRouteError
         self.format = format
 
     def distance(self) -> int:
