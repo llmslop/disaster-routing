@@ -75,9 +75,20 @@ def my_main(cfg: MainConfig):
     evaluator = cast(Evaluator, instantiate(cfg.eval))
 
     contents = set(req.content_id for req in instance.requests)
+    max_dc_content = {
+        content: min(
+            instance.dc_count,
+            min(
+                instance.topology.graph.in_degree[req.source]
+                for req in instance.requests
+                if req.content_id == content
+            ),
+        )
+        for content in contents
+    }
     content_placement = {
         # TODO: properly place contents in DCs
-        content: list(instance.possible_dc_positions[: instance.dc_count])
+        content: list(instance.possible_dc_positions[: max_dc_content[content]])
         for content in contents
     }
     log.debug(SL("Content placement", placement=content_placement))
