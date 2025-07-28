@@ -150,7 +150,7 @@ def my_main(cfg: MainConfig):
         )
         if cfg.ilp_check:
             assert ilp is not None
-            ilp.check_solution(all_routes, tuple(start_indices))
+            ilp.check_solution(all_routes, tuple(start_indices), content_placement)
 
 
 if __name__ == "__main__":

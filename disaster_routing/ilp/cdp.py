@@ -567,6 +567,7 @@ class ILPCDP:
         self,
         all_routes: ilist[ilist[Route]],
         start_indices: ilist[int],
+        content_placement: dict[int, list[int]],
         mofi: int | None = None,
     ) -> None:
         values: dict[str, int] = {}
@@ -586,6 +587,12 @@ class ILPCDP:
             (u, v, self.inst.topology.graph.edges[u, v]["weight"])
             for u, v in self.inst.topology.graph.edges
         ]
+
+        for dc in self.inst.possible_dc_positions:
+            set_value(
+                self.theta_d[dc],
+                any(dc in dc_pos for content, dc_pos in content_placement.items()),
+            )
 
         for r_idx, r in enumerate(self.inst.requests):
             for k in range(self.max_paths[r_idx]):
