@@ -9,11 +9,11 @@ from hydra.utils import instantiate
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING, OmegaConf
 
-from disaster_routing.placement.config import (
+from .placement.config import (
     ContentPlacementConfig,
     register_placement_configs,
 )
-from disaster_routing.placement.strategy import ContentPlacementStrategy
+from .placement.strategy import ContentPlacementStrategy
 
 from .ilp.cdp import ILPCDP
 

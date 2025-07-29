@@ -1,8 +1,7 @@
 import logging
 from typing import override
 
-from disaster_routing.utils.structlog import SL
-
+from ..utils.structlog import SL
 from ..utils.ilist import ilist
 from ..instances.instance import Instance
 from .strategy import ContentPlacementStrategy
