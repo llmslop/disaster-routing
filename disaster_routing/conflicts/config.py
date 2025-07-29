@@ -3,7 +3,7 @@ from typing import Any
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
 
-from ..random.config import RandomConfig, SeededRandomConfig, register_random_configs
+from ..random.config import RandomConfig, register_random_configs
 
 
 @dataclass
