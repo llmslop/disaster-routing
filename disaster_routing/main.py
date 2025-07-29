@@ -18,7 +18,7 @@ from .instances.generate import (
 from .eval.config import EvaluationConfig, register_evaluator_configs
 from .eval.evaluator import Evaluator
 from .utils.structlog import SL, color_enabled
-from .routing.routing_algo import RoutingAlgorithm
+from .routing.routing_algo import InfeasibleRouteError, RoutingAlgorithm
 from .routing.config import RoutingAlgorithmConfig, register_routing_algo_configs
 from .conflicts.conflict_graph import ConflictGraph
 from .conflicts.config import DSASolverConfig, register_dsa_solver_configs
@@ -56,6 +56,8 @@ register_dsa_solver_configs()
 register_routing_algo_configs()
 
 log = logging.getLogger(__name__)
+
+inf = int(1e16)
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="default")
@@ -112,45 +114,59 @@ def my_main(cfg: MainConfig):
         )
 
         start = time.time()
-        all_routes = router.route_instance(instance, content_placement)
-        if cfg.safety_checks:
-            for routes, req in zip(all_routes, instance.requests):
-                router.check_solution(req, content_placement[req.content_id], routes)
-        log.debug(
-            SL(
-                "Routing results",
-                route_nodes=[[r.node_list for r in routes] for routes in all_routes],
-                route_formats=[
-                    [r.format.name for r in routes] for routes in all_routes
-                ],
-                time=time.time() - start,
+        try:
+            all_routes = router.route_instance(instance, content_placement)
+            if cfg.safety_checks:
+                for routes, req in zip(all_routes, instance.requests):
+                    router.check_solution(
+                        req, content_placement[req.content_id], routes
+                    )
+            log.debug(
+                SL(
+                    "Routing results",
+                    route_nodes=[
+                        [r.node_list for r in routes] for routes in all_routes
+                    ],
+                    route_formats=[
+                        [r.format.name for r in routes] for routes in all_routes
+                    ],
+                    time=time.time() - start,
+                )
             )
-        )
 
-        conflict_graph = ConflictGraph(instance, all_routes)
-        dsa_solver = cast(DSASolver, instantiate(cfg.dsa_solver, conflict_graph))
-        start_indices, mofi = dsa_solver.solve()
-        if cfg.safety_checks:
-            dsa_solver.check(start_indices)
-        log.debug(
-            SL(
-                "DSA results",
-                start_indices=start_indices,
-                num_fses=conflict_graph.num_fses,
+            conflict_graph = ConflictGraph(instance, all_routes)
+            dsa_solver = cast(DSASolver, instantiate(cfg.dsa_solver, conflict_graph))
+            start_indices, mofi = dsa_solver.solve()
+            if cfg.safety_checks:
+                dsa_solver.check(start_indices)
+            log.debug(
+                SL(
+                    "DSA results",
+                    start_indices=start_indices,
+                    num_fses=conflict_graph.num_fses,
+                )
             )
-        )
 
-        log.info(
-            SL(
-                "Final solution",
-                total_fs=conflict_graph.total_fs(),
-                mofi=mofi,
-                score=evaluator.evaluate(conflict_graph.total_fs(), mofi),
+            log.info(
+                SL(
+                    "Final solution",
+                    total_fs=conflict_graph.total_fs(),
+                    mofi=mofi,
+                    score=evaluator.evaluate(conflict_graph.total_fs(), mofi),
+                )
             )
-        )
-        if cfg.ilp_check:
-            assert ilp is not None
-            ilp.check_solution(all_routes, tuple(start_indices), content_placement)
+            if cfg.ilp_check:
+                assert ilp is not None
+                ilp.check_solution(all_routes, tuple(start_indices), content_placement)
+        except InfeasibleRouteError:
+            log.info(
+                SL(
+                    "Final solution",
+                    total_fs=inf,
+                    mofi=inf,
+                    score=evaluator.evaluate(inf, inf),
+                )
+            )
 
 
 if __name__ == "__main__":
