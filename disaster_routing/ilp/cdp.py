@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 @final
 class ILPCDP:
     def __init__(self, inst: Instance, evaluator: Evaluator) -> None:
-        S = 100
+        S = 1000
         max_paths = [
             int(inst.topology.graph.in_degree[req.source]) for req in inst.requests
         ]
