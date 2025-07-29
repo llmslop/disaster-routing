@@ -1,10 +1,9 @@
 from math import ceil
 
-from disaster_routing.utils.ilist import ilist
-
 from ..routing.routing_algo import Route
 from ..instances.instance import Instance
 from ..topologies.graphs import Graph
+from ..utils.ilist import ilist
 
 import networkx as nx
 

@@ -1,5 +1,7 @@
 from math import isnan
 from typing import override
+
+from ..instances.instance import Instance
 from .evaluator import Evaluator
 
 
@@ -24,3 +26,7 @@ class WeightedSumEvaluator(Evaluator):
     @override
     def evaluate(self, total_fs: int, mofi: int) -> float:
         return total_fs * self.total_fs_weight + mofi * self.mofi_weight
+
+    @override
+    def get_weights(self, inst: Instance) -> tuple[float, float] | None:
+        return self.total_fs_weight, self.mofi_weight

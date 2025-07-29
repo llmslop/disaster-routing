@@ -38,7 +38,6 @@ class SGARoutingAlgorithmConfig(RoutingAlgorithmConfig):
     _short_: str = "sga"
     num_gens: int = 100
     pop_size: int = 100
-    max_depth: int = 4
     cr_rate: float = 0.7
     mut_rate: float = 0.1
     cr_num_retries_per_req: int = 10

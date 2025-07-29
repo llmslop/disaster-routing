@@ -49,7 +49,7 @@ class StructLog:
     def __str__(self) -> str:
         return (
             f"{reset_all}{bright}{self.message}{reset_all}"
-            + f"{white}{dim} >>> {reset_all}{colorize(json.dumps(self.kwargs))}"
+            + f"{white}{dim} >>> {reset_all}{colorize(json.dumps(self.kwargs, ensure_ascii=False))}"
             + f"{reset_all}"
         )
 

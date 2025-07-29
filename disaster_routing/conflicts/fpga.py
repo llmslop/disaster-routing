@@ -1,8 +1,7 @@
 from random import choices
 from typing import override
 
-from disaster_routing.conflicts.conflict_graph import ConflictGraph
-
+from .conflict_graph import ConflictGraph
 from .solver import DSASolver
 
 
