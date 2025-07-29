@@ -1,6 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 
 from hydra.core.config_store import ConfigStore
+from omegaconf import MISSING
+
+from disaster_routing.random.config import RandomConfig, register_random_configs
 
 
 @dataclass
@@ -34,8 +38,15 @@ class FlowLocalSearchAlgorithmConfig(RoutingAlgorithmConfig):
 
 @dataclass
 class SGARoutingAlgorithmConfig(RoutingAlgorithmConfig):
+    defaults: list[Any] = field(
+        default_factory=lambda: [
+            "_self_",
+            {"random": "seeded"},
+        ]
+    )
     _target_: str = "disaster_routing.routing.sga.SGARoutingAlgorithm"
     _short_: str = "sga"
+    random: RandomConfig = MISSING
     num_gens: int = 100
     pop_size: int = 100
     cr_rate: float = 0.7
@@ -52,3 +63,5 @@ def register_routing_algo_configs():
     cs.store(group="router", name="flow", node=FlowRoutingAlgorithmConfig)
     cs.store(group="router", name="flow+ls", node=FlowLocalSearchAlgorithmConfig)
     cs.store(group="router", name="sga", node=SGARoutingAlgorithmConfig)
+
+    register_random_configs("router")

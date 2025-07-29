@@ -1,11 +1,12 @@
 from functools import lru_cache
-import random
 from typing import Callable
 
+from ..random.random import Random
 from .best import BestRecord
 
 
 def permutation_npm(
+    random: Random,
     n: int,
     objective: Callable[[tuple[int]], int],
     initial_solution: tuple[int, ...] = (),
@@ -22,7 +23,7 @@ def permutation_npm(
 
     def random_from_prefix(prefix: tuple[int, ...]) -> tuple[int, ...]:
         remaining = list(set(range(n)).difference(set(prefix)))
-        random.shuffle(remaining)
+        random.stdlib.shuffle(remaining)
         return prefix + tuple(remaining)
 
     def random_from_subregions(
@@ -50,12 +51,15 @@ def permutation_npm(
         best_sample_indices = [
             i for i in range(len(sample_costs)) if sample_costs[i] == min(sample_costs)
         ]
-        best_sample_idx = random.choice(best_sample_indices)
+        best_sample_idx = random.stdlib.choice(best_sample_indices)
 
         if (
             record.cost is None
             or sample_costs[best_sample_idx] < record.cost
-            or (sample_costs[best_sample_idx] == record.cost and random.random() < 0.5)
+            or (
+                sample_costs[best_sample_idx] == record.cost
+                and random.stdlib.random() < 0.5
+            )
         ):
             if best_sample_idx == 0:
                 sol = sol[:-1]

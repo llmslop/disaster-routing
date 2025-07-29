@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 import logging
-from random import seed
 import time
 from typing import Any, cast
 
@@ -8,6 +7,8 @@ import hydra
 from hydra.utils import instantiate
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING, OmegaConf
+
+from .random.config import register_random_configs
 
 from .placement.config import (
     ContentPlacementConfig,
@@ -39,6 +40,7 @@ class MainConfig:
             {"dsa_solver": "fpga"},
             {"eval": "weightedsum"},
             {"content_placement": "greedy"},
+            {"instance/random": "unseeded"},
         ]
     )
     router: RoutingAlgorithmConfig | None = None
@@ -49,7 +51,6 @@ class MainConfig:
     safety_checks: bool = True
     ilp_check: bool | None = None
     ilp_solve: bool = False
-    random_seed: int | None = 42
 
 
 OmegaConf.register_new_resolver(
@@ -63,6 +64,7 @@ register_evaluator_configs()
 register_dsa_solver_configs()
 register_routing_algo_configs()
 register_placement_configs()
+register_random_configs("instance")
 
 log = logging.getLogger(__name__)
 
@@ -71,10 +73,6 @@ inf = int(1e16)
 
 @hydra.main(version_base=None, config_path="conf", config_name="default")
 def my_main(cfg: MainConfig):
-    log.debug(SL("RNG seed", seed=cfg.random_seed))
-    if cfg.random_seed is not None:
-        seed(cfg.random_seed)
-
     log.debug(SL("Running on instance", instance=cfg.instance.path))
     instance = load_or_gen_instance(cfg.instance)
 

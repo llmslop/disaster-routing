@@ -1,5 +1,9 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 from hydra.core.config_store import ConfigStore
+from omegaconf import MISSING
+
+from ..random.config import RandomConfig, SeededRandomConfig, register_random_configs
 
 
 @dataclass
@@ -9,25 +13,46 @@ class DSASolverConfig:
 
 @dataclass
 class GADSASolverConfig(DSASolverConfig):
+    defaults: list[Any] = field(
+        default_factory=lambda: [
+            "_self_",
+            {"random": "seeded"},
+        ]
+    )
     _target_: str = "disaster_routing.conflicts.ga.GADSASolver"
     pop_size: int = 100
     generations: int = 20
     mutation_rate: float = 0.2
     lru_size: int = 10000
+    random: RandomConfig = MISSING
 
 
 @dataclass
 class NPMDSASolverConfig(DSASolverConfig):
+    defaults: list[Any] = field(
+        default_factory=lambda: [
+            "_self_",
+            {"random": "seeded"},
+        ]
+    )
     _target_: str = "disaster_routing.conflicts.npm.NPMDSASolver"
     lru_size: int = 10000
     iter_count: int = 1000
     num_sampled_points: int = 10
+    random: RandomConfig = MISSING
 
 
 @dataclass
 class FPGADSASolverConfig(DSASolverConfig):
+    defaults: list[Any] = field(
+        default_factory=lambda: [
+            "_self_",
+            {"random": "seeded"},
+        ]
+    )
     _target_: str = "disaster_routing.conflicts.npm.FPGADSASolver"
     num_attempts: int = 5
+    random: RandomConfig = MISSING
 
 
 def register_dsa_solver_configs():
@@ -35,3 +60,5 @@ def register_dsa_solver_configs():
     cs.store(group="dsa_solver", name="ga", node=GADSASolverConfig)
     cs.store(group="dsa_solver", name="fpga", node=FPGADSASolverConfig)
     cs.store(group="dsa_solver", name="npm", node=NPMDSASolverConfig)
+
+    register_random_configs("dsa_solver")
