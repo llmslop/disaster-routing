@@ -70,8 +70,8 @@ def my_main(cfg: MainConfig):
     instance = load_or_gen_instance(cfg.instance)
 
     if cfg.ilp_check is None:
-        # skip ILP check for large topologies to avoid OOM
-        cfg.ilp_check = len(instance.topology.graph.nodes) <= 20
+        # skip ILP check for large instances to avoid OOM/TLE
+        cfg.ilp_check = len(instance.requests) <= 50
 
     log.debug(SL("Instance info", instance=instance.to_json()))
     evaluator = cast(Evaluator, instantiate(cfg.eval))
