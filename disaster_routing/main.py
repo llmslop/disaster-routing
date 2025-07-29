@@ -9,6 +9,12 @@ from hydra.utils import instantiate
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING, OmegaConf
 
+from disaster_routing.placement.config import (
+    ContentPlacementConfig,
+    register_placement_configs,
+)
+from disaster_routing.placement.strategy import ContentPlacementStrategy
+
 from .ilp.cdp import ILPCDP
 
 from .instances.generate import (
@@ -32,12 +38,14 @@ class MainConfig:
             "_self_",
             {"dsa_solver": "fpga"},
             {"eval": "weightedsum"},
+            {"content_placement": "greedy"},
         ]
     )
     router: RoutingAlgorithmConfig | None = None
     dsa_solver: DSASolverConfig = MISSING
     instance: InstanceGeneratorConfig = field(default_factory=InstanceGeneratorConfig)
     eval: EvaluationConfig = MISSING
+    content_placement: ContentPlacementConfig = MISSING
     safety_checks: bool = True
     ilp_check: bool | None = None
     ilp_solve: bool = False
@@ -54,6 +62,7 @@ cs.store(name="config", node=MainConfig)
 register_evaluator_configs()
 register_dsa_solver_configs()
 register_routing_algo_configs()
+register_placement_configs()
 
 log = logging.getLogger(__name__)
 
@@ -76,23 +85,12 @@ def my_main(cfg: MainConfig):
     log.debug(SL("Instance info", instance=instance.to_json()))
     evaluator = cast(Evaluator, instantiate(cfg.eval))
 
-    contents = set(req.content_id for req in instance.requests)
-    max_dc_content = {
-        content: min(
-            instance.dc_count,
-            min(
-                instance.topology.graph.in_degree[req.source]
-                for req in instance.requests
-                if req.content_id == content
-            ),
-        )
-        for content in contents
-    }
-    content_placement = {
-        # TODO: properly place contents in DCs
-        content: list(instance.possible_dc_positions[: max_dc_content[content]])
-        for content in contents
-    }
+    content_placement_strategy = cast(
+        ContentPlacementStrategy, instantiate(cfg.content_placement)
+    )
+    content_placement = content_placement_strategy.place_content(instance)
+    if cfg.safety_checks:
+        content_placement_strategy.verify_placement(instance, content_placement)
     log.debug(SL("Content placement", placement=content_placement))
 
     ilp: ILPCDP | None = None
