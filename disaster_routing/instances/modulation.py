@@ -50,3 +50,9 @@ class ModulationFormat:
     @override
     def __repr__(self) -> str:
         return self.name
+
+    @override
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ModulationFormat):
+            return NotImplemented
+        return self.name == other.name

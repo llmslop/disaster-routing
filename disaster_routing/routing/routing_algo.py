@@ -46,6 +46,12 @@ class Route:
             for i in range(len(self.node_list) - 1)
         ]
 
+    def has_edge(self, edge: tuple[int, int]) -> bool:
+        return any(
+            self.node_list[i] == edge[0] and self.node_list[i + 1] == edge[1]
+            for i in range(len(self.node_list) - 1)
+        )
+
     @override
     def __repr__(self) -> str:
         return str(self.node_list)
