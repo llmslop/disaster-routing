@@ -1,5 +1,9 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 from hydra.core.config_store import ConfigStore
+from omegaconf import MISSING
+
+from ..random.config import RandomConfig, register_random_configs
 
 
 @dataclass
@@ -14,7 +18,14 @@ class NaiveContentPlacementConfig(ContentPlacementConfig):
 
 @dataclass
 class StochasticContentPlacementConfig(ContentPlacementConfig):
+    defaults: list[Any] = field(
+        default_factory=lambda: [
+            "_self_",
+            {"random": "seeded"},
+        ]
+    )
     _target_: str = "disaster_routing.placement.stochastic.StochasticContentPlacement"
+    random: RandomConfig = MISSING
 
 
 @dataclass
@@ -33,3 +44,5 @@ def register_placement_configs():
     cs.store(
         group="content_placement", name="greedy", node=GreedyContentPlacementConfig
     )
+
+    register_random_configs("content_placement")

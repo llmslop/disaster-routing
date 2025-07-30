@@ -1,11 +1,12 @@
 from functools import lru_cache
-import random
 from typing import Callable
 
 from .best import BestRecord
+from ..random.random import Random
 
 
 def permutation_genetic_algorithm(
+    random: Random,
     n: int,
     objective: Callable[[tuple[int, ...]], int],
     population_size: int = 100,
@@ -18,16 +19,16 @@ def permutation_genetic_algorithm(
 
     def random_perm():
         perm = list(range(n))
-        random.shuffle(perm)
+        random.stdlib.shuffle(perm)
         return perm
 
     def mutate(perm: list[int]):
-        a, b = random.sample(range(n), 2)
+        a, b = random.stdlib.sample(range(n), 2)
         perm[a], perm[b] = perm[b], perm[a]
 
     def crossover(p1: list[int], p2: list[int]):
         # Order Crossover (OX)
-        start, end = sorted(random.sample(range(n), 2))
+        start, end = sorted(random.stdlib.sample(range(n), 2))
         child = [-1] * n
         child[start:end] = p1[start:end]
         fill = [x for x in p2 if x not in child]
@@ -51,9 +52,9 @@ def permutation_genetic_algorithm(
         # Generate new population
         new_population = elites[:]
         while len(new_population) < population_size:
-            p1, p2 = random.sample(elites, 2)
+            p1, p2 = random.stdlib.sample(elites, 2)
             child = crossover(p1, p2)
-            if random.random() < mutation_rate:
+            if random.stdlib.random() < mutation_rate:
                 mutate(child)
             new_population.append(child)
 

@@ -1,13 +1,18 @@
 from dataclasses import dataclass
 import json
 from math import ceil
-from random import choices, randint, random
 from typing import cast
+
+from hydra.utils import instantiate
+from omegaconf import MISSING
+
+from disaster_routing.random.config import RandomConfig
 
 from .instance import Instance
 from ..instances.request import Request
 from ..topologies.topology import Topology
 from ..topologies.topologies import get_topology
+from ..random.random import Random
 from ..utils.ilist import ilist
 
 
@@ -16,14 +21,17 @@ class InstanceGenerator:
     possible_dc_positions: ilist[int]
     content_count: int
     transmission_rate_range: tuple[float, float]
+    random: Random
 
     def __init__(
         self,
+        random: Random,
         topology: Topology,
         possible_dc_positions: ilist[int],
         content_count: int = 10,
         transmission_rate_range: tuple[float, float] = (0, 10),
     ):
+        self.random = random
         self.topology = topology
         self.possible_dc_positions = possible_dc_positions
         self.content_count = content_count
@@ -33,10 +41,12 @@ class InstanceGenerator:
         source_nodes: set[int] = set(self.topology.graph)
         source_nodes.difference_update(self.possible_dc_positions)
 
-        sources = choices(list(source_nodes), k=n)
-        contents = [randint(0, self.content_count - 1) for _ in range(n)]
+        sources = self.random.stdlib.choices(list(source_nodes), k=n)
+        contents = [
+            self.random.stdlib.randint(0, self.content_count - 1) for _ in range(n)
+        ]
         trans_rate = [
-            random()
+            self.random.stdlib.random()
             * (self.transmission_rate_range[1] - self.transmission_rate_range[0])
             + self.transmission_rate_range[0]
             for _ in range(n)
@@ -60,6 +70,7 @@ class InstanceGenerator:
 
 @dataclass
 class InstanceGeneratorConfig:
+    random: RandomConfig = MISSING
     num_requests: int = 10
     topology_name: str = "nsfnet"
     possible_dc_positions: ilist[int] = (2, 5, 6, 9, 11)
@@ -79,6 +90,7 @@ def load_or_gen_instance(config: InstanceGeneratorConfig) -> Instance:
             return Instance.from_json(obj)
     except IOError:
         generator = InstanceGenerator(
+            instantiate(config.random),
             get_topology(config.topology_name),
             config.possible_dc_positions,
             config.content_count,

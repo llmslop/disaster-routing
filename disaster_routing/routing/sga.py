@@ -1,10 +1,10 @@
 from functools import cache
 import logging
 from math import isnan
-import random
 from typing import Callable, cast, override
 
 from hydra.utils import instantiate
+
 
 from ..conflicts.config import DSASolverConfig
 from ..conflicts.conflict_graph import ConflictGraph
@@ -17,14 +17,15 @@ from ..topologies.graphs import Graph
 from ..utils.success_stats import SuccessRateStats
 from ..utils.structlog import SL
 from ..utils.ilist import ilist
+from ..random.random import Random
+from ..random.config import RandomConfig
 from .routing_algo import InfeasibleRouteError, Route, RoutingAlgorithm
-from .ndt import NodeDepthTree
-from .flow import reconstruct_min_hop_path
 
 log = logging.getLogger(__name__)
 
 
 def randomized_dfs(
+    random: Random,
     graph: Graph,
     start: int,
     end: int,
@@ -43,11 +44,11 @@ def randomized_dfs(
         return path.copy()
 
     neighbors = list(graph.adj[start])
-    random.shuffle(neighbors)
+    random.stdlib.shuffle(neighbors)
 
     for neighbor in neighbors:
         if neighbor not in visited:
-            result = randomized_dfs(graph, neighbor, end, visited, path)
+            result = randomized_dfs(random, graph, neighbor, end, visited, path)
             if result is not None:
                 return result
 
@@ -92,121 +93,15 @@ class Individual:
             tuple(sorted(routes, key=lambda r: r.node_list)) for routes in all_routes
         )
 
-    def to_ndts(self) -> list[NodeDepthTree]:
-        return [NodeDepthTree.from_routes(routes) for routes in self.all_routes]
-
-    @staticmethod
-    def from_ndts(
-        inst: Instance,
-        content_placement: dict[int, list[int]],
-        ndts: list[NodeDepthTree],
-    ) -> "Individual | None":
-        all_routes: list[ilist[Route]] = []
-        for req, ndt in zip(inst.requests, ndts):
-            indv = Individual.route_from_ndt(
-                inst.topology, req, content_placement[req.content_id], ndt
-            )
-            if indv is None:
-                return None
-            all_routes.append(indv)
-        return Individual(tuple(all_routes))
-
-    @staticmethod
-    def route_from_ndt(
-        top: Topology, req: Request, dst: list[int], ndt: NodeDepthTree
-    ) -> ilist[Route] | None:
-        if req.source in dst:
-            return (Route(top, (req.source,)), Route(top, (req.source,)))
-        layers: list[list[int]] = []
-        src_dz = [dz_i for dz_i, dz in enumerate(top.dzs) if req.source in dz.nodes][0]
-        dst_dzs = {
-            dz_i
-            for dz_i, dz in enumerate(top.dzs)
-            if any(dst_node in dz.nodes for dst_node in dst)
-        }
-
-        def put_layer(idx: int, elem: int):
-            nonlocal layers
-            layers += [[] for _ in range(max(0, idx + 1 - len(layers)))]
-            layers[idx].append(elem)
-
-        for dz_idx, depth in enumerate(ndt.depths):
-            if depth >= 0:
-                put_layer(depth, dz_idx)
-
-        if len(layers[0]) != 1:
-            return None
-
-        route_dz_lists: dict[int, set[ilist[int]]] = {src_dz: {(src_dz,)}}
-
-        def update_route(prev_dz: int, next_dz: int):
-            old_routes = route_dz_lists[prev_dz]
-            old_route = random.choice(list(old_routes))
-            new_route: tuple[int, ...] = old_route + (next_dz,)
-            if any(req.source not in top.dzs[dz].nodes for dz in old_route):
-                old_routes.remove(old_route)
-            if next_dz not in route_dz_lists:
-                route_dz_lists[next_dz] = {new_route}
-            else:
-                route_dz_lists[next_dz].add(new_route)
-
-        def connected(dzi: int, dzj: int) -> bool:
-            return any(
-                top.graph.has_edge(ni, nj)
-                for ni in top.dzs[dzi].nodes
-                for nj in top.dzs[dzj].nodes
-            )
-
-        for i in range(len(layers) - 1):
-            prev_layer, cur_layer = layers[i], layers[i + 1]
-
-            random.shuffle(cur_layer)
-            for dz in cur_layer:
-                prev_dzs = [
-                    prev_dz
-                    for prev_dz in prev_layer
-                    if connected(prev_dz, dz)
-                    and len(route_dz_lists.get(prev_dz, [])) > 0
-                ]
-                if len(prev_dzs) == 0:
-                    continue
-                prev_dz = random.choice(prev_dzs)
-                update_route(prev_dz, dz)
-
-        valid_routes: list[Route] = []
-        for _, routes in route_dz_lists.items():
-            for route in routes:
-                if route[-1] in dst_dzs:
-                    group_path = [top.dzs[dz].nodes for dz in route]
-                    route = reconstruct_min_hop_path(top.graph, group_path)
-                    if len(route) > 0:
-                        valid_routes.append(Route(top, route))
-
-        if len(valid_routes) <= 1:
-            return None
-
-        return tuple(valid_routes)
-
     def fitness(self, evaluator: FitnessEvaluator) -> float:
         if isnan(self.fitness_value):
             self.fitness_value = evaluator.evaluate(self)
         return self.fitness_value
 
     @staticmethod
-    def clone_instance(inst: Instance) -> Instance:
-        inst = inst.copy()
-        nodes = list(inst.topology.graph.nodes)
-        for u, v in zip(nodes, nodes):
-            if u >= v:
-                continue
-            weight = inst.topology.graph.edges[u, v]["weight"]
-            weight = random.random() * weight
-            inst.topology.graph.edges[u, v]["weight"] = weight
-            inst.topology.graph.edges[v, u]["weight"] = weight
-        return inst
-
-    @staticmethod
-    def random(inst: Instance, content_placement: dict[int, list[int]]) -> "Individual":
+    def random(
+        random: Random, inst: Instance, content_placement: dict[int, list[int]]
+    ) -> "Individual":
         all_routes: list[ilist[Route]] = [() for _ in inst.requests]
         num_retries = 0
         for k, req in enumerate(inst.requests):
@@ -214,7 +109,7 @@ class Individual:
                 all_routes[k] = ()
                 while True:
                     route = Individual.generate_new_route(
-                        inst, req, all_routes[k], content_placement
+                        random, inst, req, all_routes[k], content_placement
                     )
                     num_retries += 1
                     if route is None:
@@ -227,6 +122,7 @@ class Individual:
 
     def crossover(
         self,
+        random: Random,
         inst: Instance,
         content_placement: dict[int, list[int]],
         other: "Individual",
@@ -234,11 +130,12 @@ class Individual:
     ) -> "Individual | None":
         all_routes: list[ilist[Route]] = []
         for i, (r1, r2) in enumerate(zip(self.all_routes, other.all_routes)):
-            all_routes.append(random.choice([r1, r2]))
+            all_routes.append(random.stdlib.choice([r1, r2]))
         return Individual(tuple(all_routes))
 
     @staticmethod
     def generate_new_route(
+        random: Random,
         inst: Instance,
         req: Request,
         routes: ilist[Route],
@@ -252,7 +149,7 @@ class Individual:
             ):
                 dz.remove_from_graph(topology.graph)
         for dc in content_placement[req.content_id]:
-            route = randomized_dfs(topology.graph, req.source, dc)
+            route = randomized_dfs(random, topology.graph, req.source, dc)
             if route is None:
                 continue
             try:
@@ -263,6 +160,7 @@ class Individual:
 
     def mutate(
         self,
+        random: Random,
         inst: Instance,
         content_placement: dict[int, list[int]],
         mut_rate: float,
@@ -270,7 +168,7 @@ class Individual:
     ) -> "Individual | None":
         try:
             all_routes: list[ilist[Route]] = list(self.all_routes)
-            k = random.choice(range(len(all_routes)))
+            k = random.stdlib.choice(range(len(all_routes)))
 
             chances = {
                 "new": 1,
@@ -283,14 +181,14 @@ class Individual:
 
             # try to generate new route
             new_route = Individual.generate_new_route(
-                inst, inst.requests[k], all_routes[k], content_placement
+                random, inst, inst.requests[k], all_routes[k], content_placement
             )
             if new_route is None:
                 del chances["new"]
 
             choices = list(chances.keys())
             chances = [float(chances[c]) for c in choices]
-            match random.choices(choices, weights=chances)[0]:
+            match random.stdlib.choices(choices, weights=chances)[0]:
                 case "new":
                     assert new_route is not None
                     all_routes[k] = all_routes[k] + (new_route,)
@@ -299,9 +197,13 @@ class Individual:
                     for _ in range(num_retries_per_req):
                         while True:
                             route = Individual.generate_new_route(
-                                inst, inst.requests[k], routes, content_placement
+                                random,
+                                inst,
+                                inst.requests[k],
+                                routes,
+                                content_placement,
                             )
-                            if route is None or random.random() < 0.25:
+                            if route is None or random.stdlib.random() < 0.25:
                                 break
                             routes = routes + (route,)
                         if len(routes) < 2:
@@ -312,7 +214,7 @@ class Individual:
                     all_routes[k] = routes
                 case "prune":
                     route_list = list(all_routes[k])
-                    _ = route_list.pop(random.randint(0, len(route_list) - 1))
+                    _ = route_list.pop(random.stdlib.randint(0, len(route_list) - 1))
                     all_routes[k] = ilist[Route](route_list)
                     assert len(all_routes[k]) >= 2
                 case _:
@@ -327,6 +229,7 @@ class SGA:
     inst: Instance
     content_placement: dict[int, list[int]]
     evaluator: FitnessEvaluator
+    random: Random
     pop_size: int
     cr_rate: float
     mut_rate: float
@@ -339,6 +242,7 @@ class SGA:
         inst: Instance,
         evaluator: FitnessEvaluator,
         content_placement: dict[int, list[int]],
+        random: Random,
         pop_size: int,
         cr_rate: float,
         mut_rate: float,
@@ -349,6 +253,7 @@ class SGA:
         self.inst = inst
         self.content_placement = content_placement
         self.evaluator = evaluator
+        self.random = random
         self.pop_size = pop_size
         self.cr_rate = cr_rate
         self.mut_rate = mut_rate
@@ -357,7 +262,8 @@ class SGA:
         self.elitism_rate = elitism_rate
         log.debug("Generating initial population...")
         self.population: list[Individual] = [
-            Individual.random(inst, content_placement) for _ in range(pop_size)
+            Individual.random(self.random, inst, content_placement)
+            for _ in range(pop_size)
         ]
 
     def select(self) -> list[Individual]:
@@ -365,7 +271,7 @@ class SGA:
         tournament_size = 3
         selected: list[Individual] = []
         for _ in range(self.pop_size):
-            competitors = random.sample(self.population, tournament_size)
+            competitors = self.random.stdlib.sample(self.population, tournament_size)
             winner = self.best(competitors)
             selected.append(winner)
         return selected
@@ -389,11 +295,12 @@ class SGA:
             )
 
             while len(next_population) < self.pop_size:
-                parent1 = random.choice(selected)
-                parent2 = random.choice(selected)
+                parent1 = self.random.stdlib.choice(selected)
+                parent2 = self.random.stdlib.choice(selected)
                 child: Individual | None = None
-                if random.random() < self.cr_rate:
+                if self.random.stdlib.random() < self.cr_rate:
                     child = parent1.crossover(
+                        self.random,
                         self.inst,
                         self.content_placement,
                         parent2,
@@ -403,8 +310,9 @@ class SGA:
                 if child is None:
                     child = parent1
 
-                if random.random() < self.mut_rate:
+                if self.random.stdlib.random() < self.mut_rate:
                     child = child.mutate(
+                        self.random,
                         self.inst,
                         self.content_placement,
                         self.mut_rate,
@@ -457,6 +365,7 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
     cr_num_retries_per_req: int
     mut_num_retries_per_req: int
     elitism_rate: float
+    random: Random
 
     def __init__(
         self,
@@ -469,6 +378,7 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
         cr_num_retries_per_req: int,
         mut_num_retries_per_req: int,
         elitism_rate: float,
+        random: RandomConfig,
         **_: object,
     ):
         self.dsa_solver = dsa_solver
@@ -480,6 +390,7 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
         self.cr_num_retries_per_req = cr_num_retries_per_req
         self.mut_num_retries_per_req = mut_num_retries_per_req
         self.elitism_rate = elitism_rate
+        self.random = instantiate(random)
 
     @override
     def route_instance(
@@ -489,6 +400,7 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
             inst,
             FitnessEvaluator(inst, self.evaluator, self.dsa_solver),
             content_placement,
+            self.random,
             self.pop_size,
             self.cr_rate,
             self.mut_rate,
