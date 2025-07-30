@@ -168,57 +168,61 @@ class Individual:
     ) -> "Individual | None":
         try:
             all_routes: list[ilist[Route]] = list(self.all_routes)
-            k = random.stdlib.choice(range(len(all_routes)))
+            k = random.stdlib.randint(0, len(all_routes) - 1)
+            ks = random.stdlib.choices(range(len(all_routes)), k=k)
 
-            chances = {
-                "new": 1,
-                "reroute": 1,
-                "prune": 1,
-            }
+            for k in ks:
+                chances = {
+                    "new": 1,
+                    "reroute": 1,
+                    "prune": 1,
+                }
 
-            if len(all_routes[k]) <= 2:
-                del chances["prune"]
+                if len(all_routes[k]) <= 2:
+                    del chances["prune"]
 
-            # try to generate new route
-            new_route = Individual.generate_new_route(
-                random, inst, inst.requests[k], all_routes[k], content_placement
-            )
-            if new_route is None:
-                del chances["new"]
+                # try to generate new route
+                new_route = Individual.generate_new_route(
+                    random, inst, inst.requests[k], all_routes[k], content_placement
+                )
+                if new_route is None:
+                    del chances["new"]
 
-            choices = list(chances.keys())
-            chances = [float(chances[c]) for c in choices]
-            match random.stdlib.choices(choices, weights=chances)[0]:
-                case "new":
-                    assert new_route is not None
-                    all_routes[k] = all_routes[k] + (new_route,)
-                case "reroute":
-                    routes: ilist[Route] = ()
-                    for _ in range(num_retries_per_req):
-                        while True:
-                            route = Individual.generate_new_route(
-                                random,
-                                inst,
-                                inst.requests[k],
-                                routes,
-                                content_placement,
-                            )
-                            if route is None or random.stdlib.random() < 0.25:
-                                break
-                            routes = routes + (route,)
+                choices = list(chances.keys())
+                chances = [float(chances[c]) for c in choices]
+                match random.stdlib.choices(choices, weights=chances)[0]:
+                    case "new":
+                        assert new_route is not None
+                        all_routes[k] = all_routes[k] + (new_route,)
+                    case "reroute":
+                        routes: ilist[Route] = ()
+                        for _ in range(num_retries_per_req):
+                            while True:
+                                route = Individual.generate_new_route(
+                                    random,
+                                    inst,
+                                    inst.requests[k],
+                                    routes,
+                                    content_placement,
+                                )
+                                if route is None or random.stdlib.random() < 0.25:
+                                    break
+                                routes = routes + (route,)
+                            if len(routes) < 2:
+                                routes = ()
+                                continue
                         if len(routes) < 2:
-                            routes = ()
-                            continue
-                    if len(routes) < 2:
+                            return None
+                        all_routes[k] = routes
+                    case "prune":
+                        route_list = list(all_routes[k])
+                        _ = route_list.pop(
+                            random.stdlib.randint(0, len(route_list) - 1)
+                        )
+                        all_routes[k] = ilist[Route](route_list)
+                        assert len(all_routes[k]) >= 2
+                    case _:
                         return None
-                    all_routes[k] = routes
-                case "prune":
-                    route_list = list(all_routes[k])
-                    _ = route_list.pop(random.stdlib.randint(0, len(route_list) - 1))
-                    all_routes[k] = ilist[Route](route_list)
-                    assert len(all_routes[k]) >= 2
-                case _:
-                    return None
 
             return Individual(tuple(all_routes))
         except InfeasibleRouteError:
