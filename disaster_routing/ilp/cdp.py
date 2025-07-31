@@ -581,7 +581,12 @@ class ILPCDP:
             return values[v.name]
 
         def path_idx(k: int, r_idx: int) -> int:
-            return len(all_routes) - 1 if k == self.max_paths[r_idx] - 1 else k
+            if k == self.max_paths[r_idx] - 1:
+                return len(all_routes[r_idx]) - 1
+            elif k < len(all_routes[r_idx]) - 1:
+                return k
+            else:
+                return len(all_routes[r_idx])
 
         arcs: list[tuple[int, int, int]] = [
             (u, v, self.inst.topology.graph.edges[u, v]["weight"])
