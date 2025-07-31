@@ -18,7 +18,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Run algorithm on large test instances
-        run: scripts/run_all.sh --pattern="0100-1" +router=greedy,flow,greedy+ls,flow+ls,sga
+        run: scripts/run_all.sh --pattern="nsfnet-0100-1" +router=greedy,flow,greedy+ls,flow+ls,sga
 
       - name: Process results
         run: mkdir multirun/results && uv run scripts/collect_logs.py multirun | uv run scripts/process_results.py > multirun/results/processed.xlsx
