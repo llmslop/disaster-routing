@@ -39,8 +39,8 @@ class DisasterZone:
         edges = ((path[i], path[i + 1]) for i in range(len(path) - 1))
         return any(edge in self.edges for edge in edges)
 
-    def remove_from_graph(self, g: DiGraph):
-        g.remove_nodes_from(self.nodes)
+    def remove_from_graph(self, g: DiGraph, exclude_node: int | None = None):
+        g.remove_nodes_from([n for n in self.nodes if n != exclude_node])
         g.remove_edges_from(self.edges)
 
     @staticmethod

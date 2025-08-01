@@ -46,8 +46,8 @@ class GreedyRoutingAlgorithm(RoutingAlgorithm):
 
             path = ilist[int](paths[nearest_node])
             for dz in top.dzs:
-                if dz.affects_path(path, exclude_source=True):
-                    dz.remove_from_graph(graph)
+                if dz.affects_path(path):
+                    dz.remove_from_graph(graph, exclude_node=req.source)
 
             assert req.source in graph
             dst = [dst_node for dst_node in dst if dst_node in graph]
