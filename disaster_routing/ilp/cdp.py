@@ -10,6 +10,7 @@ from ..utils.ilist import ilist
 from ..utils.structlog import SL
 
 from pulp import (
+    PULP_CBC_CMD,
     LpAffineExpression,
     LpBinary,
     LpConstraint,
@@ -184,6 +185,7 @@ class ILPCDP:
         )
 
         self.problem += (theta_1 * total_fs + theta_2 * self.Delta, "Objective")
+        self.total_fs = total_fs
 
         # constraints
         self.problem += (
@@ -259,7 +261,7 @@ class ILPCDP:
                 i
                 for i, a in enumerate(arcs)
                 if any(edge == a[:1] for edge in z.edges)
-                or any(n == a[0] or n == 1 for n in z.nodes)
+                or any(n == a[0] or n == a[1] for n in z.nodes)
             ]
             for z_idx, z in enumerate(inst.topology.dzs)
         }
@@ -538,21 +540,22 @@ class ILPCDP:
 
     def solve(self) -> tuple[float, float]:
         assert self.problem.objective is not None
-        self.problem.solve()
+        self.problem.solve(PULP_CBC_CMD(msg=True))
         log.debug(SL("ILP objective", value=self.problem.objective.value()))
         log.debug(SL("MOFI", value=self.Delta.value()))
+        log.debug(SL("Total FS", value=self.total_fs.value()))
 
         for r_idx, r in enumerate(self.inst.requests):
             for k in range(self.max_paths[r_idx]):
                 arcs = [
-                    a
+                    a[:2]
                     for a_idx, a in enumerate(self.arcs)
                     if self.p_k_ra[(k, r_idx, a_idx)]
                 ]
                 log.debug(
                     SL(
                         "ILP solution",
-                        request=r_idx,
+                        request=r.to_json(),
                         path=k,
                         w=self.w_k_r[(k, r_idx)].value(),
                         g=self.g_k_r[(k, r_idx)].value(),
