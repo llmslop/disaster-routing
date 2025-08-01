@@ -168,7 +168,7 @@ class Individual:
     ) -> "Individual | None":
         try:
             all_routes: list[ilist[Route]] = list(self.all_routes)
-            k = random.stdlib.randint(0, len(all_routes) - 1)
+            k = min(random.numpy.geometric(0.8), len(all_routes) - 1)
             ks = random.stdlib.choices(range(len(all_routes)), k=k)
 
             for k in ks:
