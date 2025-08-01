@@ -30,7 +30,7 @@ def generate_dist_map(
     graph: Graph, content_placement: dict[int, list[int]]
 ) -> dict[int, dict[int, float]]:
     return {
-        content: dict(nx.multi_source_dijkstra_path_length(graph, dcs))
+        content: dict(nx.multi_source_dijkstra_path_length(graph, dcs, weight=None))
         for content, dcs in content_placement.items()
     }
 
@@ -56,8 +56,7 @@ def randomized_dfs(
         return path.copy()
 
     neighbors = list(graph.adj[start])
-    # neighbors.sort(key=lambda node: dist_map[node] * 0.0 + random.stdlib.random())
-    random.stdlib.shuffle(neighbors)
+    neighbors.sort(key=lambda node: dist_map[node] * 0.5 + random.stdlib.random())
 
     for neighbor in neighbors:
         if neighbor not in visited:
