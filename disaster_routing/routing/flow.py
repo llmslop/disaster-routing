@@ -1,3 +1,4 @@
+import logging
 from math import ceil
 from typing import cast, override
 import networkx as nx
@@ -8,6 +9,8 @@ from ..instances.request import Request
 from ..topologies.topology import Topology
 from ..topologies.graphs import Graph, StrDiGraph
 from ..utils.ilist import ilist
+
+log = logging.getLogger(__name__)
 
 
 def extract_dz_index(name: str) -> int | None:
@@ -111,6 +114,7 @@ def reconstruct_min_hop_path(G: Graph, group_path: list[set[int]]) -> ilist[int]
 
 class FlowRoutingAlgorithm(RoutingAlgorithm):
     def __init__(self, *_: object, **__: object) -> None:
+        self.inv_alpha: float = 1e6
         pass
 
     @override
@@ -153,11 +157,27 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                 for j in range(i + 1, len(top.dzs)):
                     dzj = top.dzs[j]
 
-                    if any(
-                        top.graph.has_edge(u, v) for u, v in zip(dzi.nodes, dzj.nodes)
-                    ):
-                        flow_graph.add_edge(sink_nodes[i], source_nodes[j], weight=1)
-                        flow_graph.add_edge(sink_nodes[j], source_nodes[i], weight=1)
+                    min_dist = min(
+                        (
+                            cast(float, top.graph.edges[u, v]["weight"])
+                            for u, v in zip(dzi.nodes, dzj.nodes)
+                            if top.graph.has_edge(u, v)
+                        ),
+                        default=None,
+                    )
+
+                    if min_dist is not None:
+                        weight = int(min_dist + self.inv_alpha)
+                        flow_graph.add_edge(
+                            sink_nodes[i],
+                            source_nodes[j],
+                            weight=weight,
+                        )
+                        flow_graph.add_edge(
+                            sink_nodes[j],
+                            source_nodes[i],
+                            weight=weight,
+                        )
 
             try:
                 flow = cast(dict[str, dict[str, int]], nx.min_cost_flow(flow_graph))
