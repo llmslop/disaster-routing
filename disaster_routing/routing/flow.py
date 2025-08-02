@@ -190,12 +190,22 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
             try:
                 flow = cast(dict[str, dict[str, int]], nx.min_cost_flow(flow_graph))
                 dz_paths = extract_all_flow_paths(flow_graph, "source", "sink", flow)
-                routes: list[Route] = []
+                dz_set_lists: list[list[set[int]]] = []
                 for dz_path in dz_paths:
                     dz_index_list: list[int] = remove_consecutive_duplicates(
                         remove_nones([extract_dz_index(node) for node in dz_path])
                     )
-                    dz_set_list = [top.dzs[i].nodes for i in dz_index_list]
+                    dz_set_lists.append([set(top.dzs[i].nodes) for i in dz_index_list])
+                for i in range(len(dz_set_lists)):
+                    for j in range(len(dz_set_lists)):
+                        if i == j:
+                            continue
+                        dz_route_i, dz_route_j = dz_set_lists[i], dz_set_lists[j]
+                        for k in range(0, len(dz_route_i)):
+                            for l in range(1, len(dz_route_j)):
+                                dz_route_i[k].difference_update(dz_route_j[l])
+                routes: list[Route] = []
+                for dz_set_list in dz_set_lists:
                     path = reconstruct_min_hop_path(
                         top.graph,
                         req.source,
@@ -206,15 +216,6 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                         break
                     routes.append(Route(top, path))
                 if len(routes) >= 2:
-                    log.debug(
-                        SL(
-                            "solo leveling",
-                            dz_paths=dz_paths,
-                            routes=[route.node_list for route in routes],
-                            request=req.to_json(),
-                            dst=dst,
-                        )
-                    )
                     cost = self.route_set_cost(routes, req.bpsk_fs_count)
                     if cost < best_route_set_cost:
                         best_route_set = tuple(routes)
