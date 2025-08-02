@@ -22,6 +22,7 @@ from ..utils.ilist import ilist
 from ..random.random import Random
 from ..random.config import RandomConfig
 from .routing_algo import InfeasibleRouteError, Route, RoutingAlgorithm
+from .flow import FlowRoutingAlgorithm
 
 log = logging.getLogger(__name__)
 
@@ -316,8 +317,8 @@ class SGA:
         self.dist_map = generate_dist_map(inst.topology.graph, content_placement)
         self.population: list[Individual] = [
             Individual.random(self.random, inst, self.dist_map, content_placement)
-            for _ in range(pop_size)
-        ]
+            for _ in range(pop_size - 1)
+        ] + [Individual(FlowRoutingAlgorithm().route_instance(inst, content_placement))]
 
     def select(self) -> list[Individual]:
         # Tournament selection
