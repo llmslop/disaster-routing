@@ -9,7 +9,6 @@ from ..instances.request import Request
 from ..topologies.topology import Topology
 from ..topologies.graphs import Graph, StrDiGraph
 from ..utils.ilist import ilist
-from ..utils.structlog import SL
 
 log = logging.getLogger(__name__)
 
