@@ -82,6 +82,7 @@ def extract_all_flow_paths(
 def reconstruct_min_hop_path(
     G: Graph, source: int, avail_outs: list[int], group_path: list[set[int]]
 ) -> ilist[int]:
+    group_path = [{source}] + group_path + [group_path[-1].intersection(avail_outs)]
     # group_path: list of sets of nodes (G1, G2, ..., Gk)
     # Returns: (min_path, hop_count)
 
@@ -152,7 +153,11 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
 
                 if len(dz.nodes.intersection(dst)) > 0:
                     if req.source in dz.nodes:
-                        flow_graph.add_edge(sink_nodes[i], "sink")
+                        flow_graph.add_edge(
+                            sink_nodes[i],
+                            "sink",
+                            capacity=len(dz.nodes.intersection(dst)),
+                        )
                     else:
                         flow_graph.add_edge(sink_nodes[i], "sink", capacity=1)
 
@@ -192,10 +197,11 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                     )
                     dz_set_list = [top.dzs[i].nodes for i in dz_index_list]
                     path = reconstruct_min_hop_path(
-                        top.graph, req.source, dst, dz_set_list
+                        top.graph,
+                        req.source,
+                        dst,
+                        dz_set_list,
                     )
-                    if len(dz_paths) >= 2:
-                        log.debug(SL("mid leveling", dzs=dz_index_list, path=path))
                     if len(path) == 0:
                         break
                     routes.append(Route(top, path))
@@ -206,6 +212,7 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                             dz_paths=dz_paths,
                             routes=[route.node_list for route in routes],
                             request=req.to_json(),
+                            dst=dst,
                         )
                     )
                     cost = self.route_set_cost(routes, req.bpsk_fs_count)
