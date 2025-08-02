@@ -509,7 +509,7 @@ class ILPCDP:
                         continue
                     self.problem += (
                         self.g_k_r[(k, r_idx)]
-                        + self.Phi_k_r[(k_prime, r_idx)]
+                        + self.Phi_k_r[(k, r_idx)]
                         - self.g_k_r[(k_prime, r_idx)]
                         <= M
                         * (
@@ -742,7 +742,7 @@ class ILPCDP:
                     )
                     set_value(
                         self.beta_kkp_r[(k_prime, k, r_idx)],
-                        value,
+                        1 - value,
                     )
         for r_idx, r in enumerate(self.inst.requests):
             for r_prime_idx, r_prime in enumerate(self.inst.requests):
