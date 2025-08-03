@@ -200,9 +200,9 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                         if i == j:
                             continue
                         dz_route_i, dz_route_j = dz_set_lists[i], dz_set_lists[j]
-                        for k in range(0, len(dz_route_i)):
-                            for l in range(1, len(dz_route_j)):
-                                dz_route_i[k].difference_update(dz_route_j[l])
+                        for k1 in range(0, len(dz_route_i)):
+                            for k2 in range(1, len(dz_route_j)):
+                                dz_route_i[k1].difference_update(dz_route_j[k2])
                 routes: list[Route] = []
                 for dz_set_list in dz_set_lists:
                     path = reconstruct_min_hop_path(
