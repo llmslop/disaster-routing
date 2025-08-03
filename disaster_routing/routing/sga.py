@@ -1,5 +1,5 @@
 #!/bin/env python3
-from itertools import chain, combinations
+from itertools import combinations
 import networkx as nx
 from functools import cache
 import logging
