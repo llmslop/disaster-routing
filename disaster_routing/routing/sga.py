@@ -148,7 +148,9 @@ class Individual:
                 and req.source not in dz.nodes
             ):
                 dz.remove_from_graph(topology.graph)
-        for dc in content_placement[req.content_id]:
+        dcs = set(content_placement[req.content_id])
+        dcs.difference_update((route.node_list[-1] for route in routes))
+        for dc in dcs:
             route = randomized_dfs(random, topology.graph, req.source, dc)
             if route is None:
                 continue
