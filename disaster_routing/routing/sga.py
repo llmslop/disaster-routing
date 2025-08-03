@@ -1,12 +1,15 @@
 #!/bin/env python3
-import networkx as nx
 from functools import cache
 import logging
 from math import isnan
+from statistics import mean
 from typing import Callable, cast, override
 
+import numpy as np
+import networkx as nx
 from hydra.utils import instantiate
-
+from Levenshtein import ratio as lev_ratio
+from scipy.optimize import linear_sum_assignment
 
 from ..conflicts.config import DSASolverConfig
 from ..conflicts.conflict_graph import ConflictGraph
@@ -33,6 +36,32 @@ def generate_dist_map(
         content: dict(nx.multi_source_dijkstra_path_length(graph, dcs, weight=None))
         for content, dcs in content_placement.items()
     }
+
+
+def route_similarity(route1: Route, route2: Route) -> float:
+    return 1.0 - lev_ratio(route1.node_list, route2.node_list)
+
+
+def route_set_similarity(routes1: ilist[Route], routes2: ilist[Route]) -> float:
+    n = max(len(routes1), len(routes2))
+    matrix = np.ones((n, n), dtype=np.float64)
+    for i, r1 in enumerate(routes1):
+        for j, r2 in enumerate(routes2):
+            matrix[i][j] = route_similarity(r1, r2)
+    row_ind, col_ind = linear_sum_assignment(matrix)
+    return float(matrix[row_ind, col_ind].sum() / n if n > 0 else 0.0)
+
+
+def population_diversity(pop: list["Individual"]) -> float:
+    n = len(pop)
+    return mean(
+        mean(
+            route_set_similarity(r1, r2)
+            for r1, r2 in zip(pop[i].all_routes, pop[j].all_routes)
+        )
+        for i in range(n)
+        for j in range(i + 1, n)
+    )
 
 
 def randomized_dfs(
@@ -382,6 +411,13 @@ class SGA:
             )
             log.debug(
                 SL("Mutation success rate", gen=gen, dist=mut_success_rate.info())
+            )
+            log.debug(
+                SL(
+                    "Population diversity",
+                    gen=gen,
+                    diversity=population_diversity(next_population),
+                )
             )
             log.debug(
                 SL(
