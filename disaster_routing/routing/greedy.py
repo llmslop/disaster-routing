@@ -17,6 +17,7 @@ class GreedyRoutingAlgorithm(RoutingAlgorithm):
     @override
     def route_request(self, req: Request, top: Topology, dst: set[int]) -> ilist[Route]:
         assert len(dst) >= 2
+        dst = set(dst)
         graph = top.graph.copy()
 
         routes: list[Route] = []
