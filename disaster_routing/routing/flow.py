@@ -13,6 +13,22 @@ from ..utils.ilist import ilist
 log = logging.getLogger(__name__)
 
 
+def init_free_nodes(
+    top: Topology, req: Request, dz_set_lists: list[list[set[int]]]
+) -> set[int]:
+    free_nodes: set[int] = set(top.graph.nodes)
+    mentioned_nodes = {
+        node
+        for dz_set_list in dz_set_lists
+        for dz_set in dz_set_list
+        for node in dz_set
+    }
+    for node in mentioned_nodes:
+        if any(req.source not in dz.nodes and node in dz.nodes for dz in top.dzs):
+            free_nodes.remove(node)
+    return free_nodes
+
+
 def extract_dz_index(name: str) -> int | None:
     name = name.replace("_source", "").replace("_sink", "").replace("DZ", "")
     try:
@@ -77,9 +93,12 @@ def extract_all_flow_paths(
     return paths
 
 
-# TODO: add available out nodes constraint
 def reconstruct_min_hop_path(
-    G: Graph, source: int, avail_outs: list[int], group_path: list[set[int]]
+    G: Graph,
+    source: int,
+    avail_outs: list[int],
+    group_path: list[set[int]],
+    free_nodes: set[int],
 ) -> ilist[int]:
     group_path = [{source}] + group_path + [group_path[-1].intersection(avail_outs)]
     # group_path: list of sets of nodes (G1, G2, ..., Gk)
@@ -96,7 +115,13 @@ def reconstruct_min_hop_path(
             for v in group_path[i - 1]:
                 if v in dp:
                     try:
-                        path = nx.shortest_path(G, dp[v][1][-1], u)
+                        path = nx.shortest_path(
+                            G.subgraph(
+                                free_nodes.union(group_path[i - 1]).union(group_path[i])
+                            ),
+                            dp[v][1][-1],
+                            u,
+                        )
                         hops = len(path) - 1
                         total_hops = dp[v][0] + hops
                         if best is None or total_hops < best[0]:
@@ -129,7 +154,7 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
         best_route_set: ilist[Route] | None = None
         best_route_set_cost = np.inf
 
-        for K in range(1, len(dst) + 1):
+        for K in range(2, len(dst) + 1):
             flow_graph = StrDiGraph()
 
             flow_graph.add_node("source", demand=-K)
@@ -204,15 +229,23 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                             for k2 in range(1, len(dz_route_j)):
                                 dz_route_i[k1].difference_update(dz_route_j[k2])
                 routes: list[Route] = []
+                free_nodes = init_free_nodes(top, req, dz_set_lists)
                 for dz_set_list in dz_set_lists:
                     path = reconstruct_min_hop_path(
                         top.graph,
                         req.source,
                         dst,
                         dz_set_list,
+                        free_nodes,
                     )
                     if len(path) == 0:
                         break
+                    for node in free_nodes.intersection(path):
+                        if any(
+                            req.source not in dz.nodes and node in dz.nodes
+                            for dz in top.dzs
+                        ):
+                            free_nodes.remove(node)
                     routes.append(Route(top, path))
                 if len(routes) >= 2:
                     cost = self.route_set_cost(routes, req.bpsk_fs_count)
