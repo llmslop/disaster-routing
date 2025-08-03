@@ -15,9 +15,7 @@ class GreedyRoutingAlgorithm(RoutingAlgorithm):
         pass
 
     @override
-    def route_request(
-        self, req: Request, top: Topology, dst: list[int]
-    ) -> ilist[Route]:
+    def route_request(self, req: Request, top: Topology, dst: set[int]) -> ilist[Route]:
         assert len(dst) >= 2
         graph = top.graph.copy()
 
@@ -50,7 +48,7 @@ class GreedyRoutingAlgorithm(RoutingAlgorithm):
                     dz.remove_from_graph(graph)
 
             assert req.source in graph
-            dst = [dst_node for dst_node in dst if dst_node in graph]
+            dst.intersection_update(graph.nodes)
 
             dist = nx.path_weight(top.graph, path, "weight")
             format = ModulationFormat.best_rate_format_with_distance(dist)

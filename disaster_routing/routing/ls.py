@@ -40,13 +40,11 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
         self.f_max = f_max
 
     @override
-    def route_request(
-        self, req: Request, top: Topology, dst: list[int]
-    ) -> ilist[Route]:
+    def route_request(self, req: Request, top: Topology, dst: set[int]) -> ilist[Route]:
         raise NotImplementedError()
 
     def route_instance_single_pass(
-        self, inst: Instance, content_placement: dict[int, list[int]]
+        self, inst: Instance, content_placement: dict[int, set[int]]
     ) -> tuple[ilist[ilist[Route]], set[tuple[int, int]], int, int]:
         routes = self.base.route_instance(inst, content_placement)
         flattened_routes = [r for route in routes for r in route]
@@ -65,7 +63,7 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
 
     @override
     def route_instance(
-        self, inst: Instance, content_placement: dict[int, list[int]]
+        self, inst: Instance, content_placement: dict[int, set[int]]
     ) -> ilist[ilist[Route]]:
         num_passes = 1
         routes, edges_with_mofi, total_fs, mofi = self.route_instance_single_pass(
