@@ -112,6 +112,7 @@ def my_main(cfg: MainConfig):
         start = time.time()
         try:
             all_routes = router.route_instance(instance, content_placement)
+            all_routes = router.sort_routes(all_routes)
             if cfg.safety_checks:
                 for routes, req in zip(all_routes, instance.requests):
                     router.check_solution(

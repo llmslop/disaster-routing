@@ -100,3 +100,9 @@ class RoutingAlgorithm(ABC):
             self.route_request(req, inst.topology, content_placement[req.content_id])
             for req in inst.requests
         )
+
+    def sort_routes(self, all_routes: ilist[ilist[Route]]) -> ilist[ilist[Route]]:
+        sorted_routes: ilist[ilist[Route]] = ()
+        for routes in all_routes:
+            sorted_routes += (ilist[Route](sorted(routes, key=lambda r: r.node_list)),)
+        return sorted_routes

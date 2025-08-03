@@ -1,3 +1,5 @@
+#!/bin/env python3
+import networkx as nx
 from functools import cache
 import logging
 from math import isnan
@@ -24,11 +26,21 @@ from .routing_algo import InfeasibleRouteError, Route, RoutingAlgorithm
 log = logging.getLogger(__name__)
 
 
+def generate_dist_map(
+    graph: Graph, content_placement: dict[int, list[int]]
+) -> dict[int, dict[int, float]]:
+    return {
+        content: dict(nx.multi_source_dijkstra_path_length(graph, dcs, weight=None))
+        for content, dcs in content_placement.items()
+    }
+
+
 def randomized_dfs(
     random: Random,
     graph: Graph,
+    dist_map: dict[int, float],
     start: int,
-    end: int,
+    end: list[int],
     visited: set[int] | None = None,
     path: list[int] | None = None,
 ) -> list[int] | None:
@@ -40,15 +52,17 @@ def randomized_dfs(
     visited.add(start)
     path.append(start)
 
-    if start == end:
+    if start in end:
         return path.copy()
 
     neighbors = list(graph.adj[start])
-    random.stdlib.shuffle(neighbors)
+    neighbors.sort(key=lambda node: dist_map[node] * 0.5 + random.stdlib.random())
 
     for neighbor in neighbors:
         if neighbor not in visited:
-            result = randomized_dfs(random, graph, neighbor, end, visited, path)
+            result = randomized_dfs(
+                random, graph, dist_map, neighbor, end, visited, path
+            )
             if result is not None:
                 return result
 
@@ -100,21 +114,31 @@ class Individual:
 
     @staticmethod
     def random(
-        random: Random, inst: Instance, content_placement: dict[int, list[int]]
+        random: Random,
+        inst: Instance,
+        dist_map: dict[int, dict[int, float]],
+        content_placement: dict[int, list[int]],
     ) -> "Individual":
         all_routes: list[ilist[Route]] = [() for _ in inst.requests]
         num_retries = 0
         for k, req in enumerate(inst.requests):
             while True:
                 all_routes[k] = ()
+                dcs = set(content_placement[req.content_id])
                 while True:
                     route = Individual.generate_new_route(
-                        random, inst, req, all_routes[k], content_placement
+                        random,
+                        inst,
+                        dist_map[req.content_id],
+                        req,
+                        all_routes[k],
+                        tuple(dcs),
                     )
                     num_retries += 1
                     if route is None:
                         break
                     all_routes[k] = all_routes[k] + (route,)
+                    dcs.remove(route.node_list[-1])
                 if len(all_routes[k]) >= 2:
                     break
         log.debug(SL("Finished generating random individual", num_retries=num_retries))
@@ -134,12 +158,18 @@ class Individual:
         return Individual(tuple(all_routes))
 
     @staticmethod
+    def shorten_route(route: list[int], dcs: ilist[int]) -> list[int]:
+        k = next(i for i in range(len(route)) if route[i] in dcs)
+        return route[: k + 1]
+
+    @staticmethod
     def generate_new_route(
         random: Random,
         inst: Instance,
+        dist_map: dict[int, float],
         req: Request,
         routes: ilist[Route],
-        content_placement: dict[int, list[int]],
+        dcs: ilist[int],
     ) -> Route | None:
         topology = inst.topology.copy()
         for dz in topology.dzs:
@@ -148,22 +178,27 @@ class Individual:
                 and req.source not in dz.nodes
             ):
                 dz.remove_from_graph(topology.graph)
-        dcs = set(content_placement[req.content_id])
-        dcs.difference_update((route.node_list[-1] for route in routes))
-        for dc in dcs:
-            route = randomized_dfs(random, topology.graph, req.source, dc)
+        avail_dcs = set(dcs)
+        avail_dcs.difference_update((route.node_list[-1] for route in routes))
+        while len(avail_dcs) > 0:
+            route = randomized_dfs(
+                random, topology.graph, dist_map, req.source, list(avail_dcs)
+            )
             if route is None:
-                continue
+                break
+            route = Individual.shorten_route(route, dcs)
             try:
                 return Route(inst.topology, ilist[int](route))
             except InfeasibleRouteError:
-                pass
+                if route[-1] in avail_dcs:
+                    avail_dcs.remove(route[-1])
         return None
 
     def mutate(
         self,
         random: Random,
         inst: Instance,
+        dist_map: dict[int, dict[int, float]],
         content_placement: dict[int, list[int]],
         mut_rate: float,
         num_retries_per_req: int,
@@ -183,9 +218,17 @@ class Individual:
                 if len(all_routes[k]) <= 2:
                     del chances["prune"]
 
+                dcs = set(content_placement[inst.requests[k].content_id]).difference(
+                    route.node_list[-1] for route in all_routes[k]
+                )
                 # try to generate new route
                 new_route = Individual.generate_new_route(
-                    random, inst, inst.requests[k], all_routes[k], content_placement
+                    random,
+                    inst,
+                    dist_map[inst.requests[k].content_id],
+                    inst.requests[k],
+                    all_routes[k],
+                    tuple(dcs),
                 )
                 if new_route is None:
                     del chances["new"]
@@ -198,18 +241,21 @@ class Individual:
                         all_routes[k] = all_routes[k] + (new_route,)
                     case "reroute":
                         routes: ilist[Route] = ()
+                        dcs = set(content_placement[inst.requests[k].content_id])
                         for _ in range(num_retries_per_req):
                             while True:
                                 route = Individual.generate_new_route(
                                     random,
                                     inst,
+                                    dist_map[inst.requests[k].content_id],
                                     inst.requests[k],
                                     routes,
-                                    content_placement,
+                                    tuple(dcs),
                                 )
                                 if route is None or random.stdlib.random() < 0.25:
                                     break
                                 routes = routes + (route,)
+                                dcs.remove(route.node_list[-1])
                             if len(routes) < 2:
                                 routes = ()
                                 continue
@@ -242,6 +288,7 @@ class SGA:
     cr_num_retries_per_req: int
     mut_num_retries_per_req: int
     elitism_rate: float
+    dist_map: dict[int, dict[int, float]]
 
     def __init__(
         self,
@@ -267,8 +314,9 @@ class SGA:
         self.mut_num_retries_per_req = mut_num_retries_per_req
         self.elitism_rate = elitism_rate
         log.debug("Generating initial population...")
+        self.dist_map = generate_dist_map(inst.topology.graph, content_placement)
         self.population: list[Individual] = [
-            Individual.random(self.random, inst, content_placement)
+            Individual.random(self.random, inst, self.dist_map, content_placement)
             for _ in range(pop_size)
         ]
 
@@ -320,6 +368,7 @@ class SGA:
                     child = child.mutate(
                         self.random,
                         self.inst,
+                        self.dist_map,
                         self.content_placement,
                         self.mut_rate,
                         self.mut_num_retries_per_req,
