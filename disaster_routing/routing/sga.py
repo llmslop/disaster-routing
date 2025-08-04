@@ -1,4 +1,5 @@
 #!/bin/env python3
+from itertools import combinations
 import networkx as nx
 from functools import cache
 import logging
@@ -26,12 +27,22 @@ from .routing_algo import InfeasibleRouteError, Route, RoutingAlgorithm
 log = logging.getLogger(__name__)
 
 
-def generate_dist_map(
-    graph: Graph, content_placement: dict[int, set[int]]
-) -> dict[int, dict[int, float]]:
+def power_set(s: set[int]) -> set[ilist[int]]:
     return {
-        content: dict(nx.multi_source_dijkstra_path_length(graph, dcs, weight=None))
-        for content, dcs in content_placement.items()
+        tuple(sorted(subset))
+        for r in range(1, len(s) + 1)
+        for subset in combinations(s, r)
+    }
+
+
+def generate_dist_map(
+    graph: Graph, dcs: set[int]
+) -> dict[ilist[int], dict[int, float]]:
+    return {
+        dc_subset: dict(
+            nx.multi_source_dijkstra_path_length(graph, dc_subset, weight=None)
+        )
+        for dc_subset in power_set(dcs)
     }
 
 
@@ -116,7 +127,7 @@ class Individual:
     def random(
         random: Random,
         inst: Instance,
-        dist_map: dict[int, dict[int, float]],
+        dist_map: dict[ilist[int], dict[int, float]],
         content_placement: dict[int, set[int]],
     ) -> "Individual":
         all_routes: list[ilist[Route]] = [() for _ in inst.requests]
@@ -125,11 +136,11 @@ class Individual:
             while True:
                 all_routes[k] = ()
                 dcs = set(content_placement[req.content_id])
-                while True:
+                while len(dcs) > 0:
                     route = Individual.generate_new_route(
                         random,
                         inst,
-                        dist_map[req.content_id],
+                        dist_map[tuple(sorted(dcs))],
                         req,
                         all_routes[k],
                         tuple(dcs),
@@ -197,7 +208,7 @@ class Individual:
         self,
         random: Random,
         inst: Instance,
-        dist_map: dict[int, dict[int, float]],
+        dist_map: dict[ilist[int], dict[int, float]],
         content_placement: dict[int, set[int]],
         mut_rate: float,
         num_retries_per_req: int,
@@ -224,7 +235,9 @@ class Individual:
                 new_route = Individual.generate_new_route(
                     random,
                     inst,
-                    dist_map[inst.requests[k].content_id],
+                    dist_map[
+                        tuple(sorted(content_placement[inst.requests[k].content_id]))
+                    ],
                     inst.requests[k],
                     all_routes[k],
                     tuple(dcs),
@@ -242,11 +255,11 @@ class Individual:
                         routes: ilist[Route] = ()
                         dcs = set(content_placement[inst.requests[k].content_id])
                         for _ in range(num_retries_per_req):
-                            while True:
+                            while len(dcs) > 0:
                                 route = Individual.generate_new_route(
                                     random,
                                     inst,
-                                    dist_map[inst.requests[k].content_id],
+                                    dist_map[tuple(sorted(dcs))],
                                     inst.requests[k],
                                     routes,
                                     tuple(dcs),
@@ -287,7 +300,7 @@ class SGA:
     cr_num_retries_per_req: int
     mut_num_retries_per_req: int
     elitism_rate: float
-    dist_map: dict[int, dict[int, float]]
+    dist_map: dict[ilist[int], dict[int, float]]
 
     def __init__(
         self,
@@ -313,7 +326,10 @@ class SGA:
         self.mut_num_retries_per_req = mut_num_retries_per_req
         self.elitism_rate = elitism_rate
         log.debug("Generating initial population...")
-        self.dist_map = generate_dist_map(inst.topology.graph, content_placement)
+        self.dist_map = generate_dist_map(
+            inst.topology.graph,
+            {dc for dcs in content_placement.values() for dc in dcs},
+        )
         self.population: list[Individual] = [
             Individual.random(self.random, inst, self.dist_map, content_placement)
             for _ in range(pop_size)
