@@ -23,6 +23,7 @@ from ..utils.ilist import ilist
 from ..random.random import Random
 from ..random.config import RandomConfig
 from .routing_algo import InfeasibleRouteError, Route, RoutingAlgorithm
+from .flow import FlowRoutingAlgorithm
 
 log = logging.getLogger(__name__)
 
@@ -215,7 +216,7 @@ class Individual:
     ) -> "Individual | None":
         try:
             all_routes: list[ilist[Route]] = list(self.all_routes)
-            k = min(random.numpy.geometric(0.8), len(all_routes) - 1)
+            k = min(random.numpy.geometric(0.5), len(all_routes) - 1)
             ks = random.stdlib.choices(range(len(all_routes)), k=k)
 
             for k in ks:
@@ -272,7 +273,7 @@ class Individual:
                                 routes = ()
                                 continue
                         if len(routes) < 2:
-                            return None
+                            continue
                         all_routes[k] = routes
                     case "prune":
                         route_list = list(all_routes[k])
@@ -282,7 +283,7 @@ class Individual:
                         all_routes[k] = ilist[Route](route_list)
                         assert len(all_routes[k]) >= 2
                     case _:
-                        return None
+                        continue
 
             return Individual(tuple(all_routes))
         except InfeasibleRouteError:
@@ -332,8 +333,8 @@ class SGA:
         )
         self.population: list[Individual] = [
             Individual.random(self.random, inst, self.dist_map, content_placement)
-            for _ in range(pop_size)
-        ]
+            for _ in range(pop_size - 1)
+        ] + [Individual(FlowRoutingAlgorithm().route_instance(inst, content_placement))]
 
     def select(self) -> list[Individual]:
         # Tournament selection
