@@ -4,12 +4,8 @@ import networkx as nx
 from functools import cache
 import logging
 from math import isnan
-from typing import Callable, cast, override
+from typing import Callable, override
 
-from hydra.utils import instantiate
-
-
-from ..conflicts.config import DSASolverConfig
 from ..conflicts.conflict_graph import ConflictGraph
 from ..conflicts.solver import DSASolver
 from ..eval.evaluator import Evaluator
@@ -21,7 +17,6 @@ from ..utils.success_stats import SuccessRateStats
 from ..utils.structlog import SL
 from ..utils.ilist import ilist
 from ..random.random import Random
-from ..random.config import RandomConfig
 from .routing_algo import InfeasibleRouteError, Route, RoutingAlgorithm
 
 log = logging.getLogger(__name__)
@@ -85,22 +80,21 @@ def randomized_dfs(
 class FitnessEvaluator:
     inst: Instance
     eval: Evaluator
-    dsa_config: DSASolverConfig
+    dsa_solver: DSASolver
     eval_cached: Callable[[ilist[ilist[Route]]], float]
     fitness_eval_count: int = 0
 
     def eval_tuple(self, routes: ilist[ilist[Route]]) -> float:
         conflict_graph = ConflictGraph(self.inst, routes)
-        dsa_solver = cast(DSASolver, instantiate(self.dsa_config, conflict_graph))
-        _, mofi = dsa_solver.solve()
+        _, mofi = self.dsa_solver.solve(conflict_graph)
         self.fitness_eval_count = self.fitness_eval_count + 1
         result = self.eval.evaluate(conflict_graph.total_fs(), mofi)
         return result
 
-    def __init__(self, inst: Instance, eval: Evaluator, dsa_config: DSASolverConfig):
+    def __init__(self, inst: Instance, eval: Evaluator, dsa_solver: DSASolver):
         self.inst = inst
         self.eval = eval
-        self.dsa_config = dsa_config
+        self.dsa_solver = dsa_solver
 
         self.eval_cached = cache(lambda inp: self.eval_tuple(inp))
 
@@ -292,7 +286,7 @@ class Individual:
 class SGARoutingAlgorithm(RoutingAlgorithm):
     evaluator: Evaluator
     random: Random
-    dsa_solver: DSASolverConfig
+    dsa_solver: DSASolver
     num_gens: int
     pop_size: int
     cr_rate: float
@@ -304,8 +298,8 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
     def __init__(
         self,
         evaluator: Evaluator,
-        random: RandomConfig,
-        dsa_solver: DSASolverConfig,
+        random: Random,
+        dsa_solver: DSASolver,
         num_gens: int,
         pop_size: int,
         cr_rate: float,
@@ -316,7 +310,7 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
         **kwargs: object,
     ):
         self.evaluator = evaluator
-        self.random = instantiate(random)
+        self.random = random
         self.dsa_solver = dsa_solver
         self.num_gens = num_gens
         self.pop_size = pop_size

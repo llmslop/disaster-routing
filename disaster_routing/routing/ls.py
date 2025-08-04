@@ -1,13 +1,11 @@
 import logging
-from typing import cast, override
+from typing import override
 
-from hydra.utils import instantiate
 
 from .routing_algo import InfeasibleRouteError, RoutingAlgorithm, Route
 from ..instances.request import Request
 from ..instances.instance import Instance
 from ..topologies.topology import Topology
-from ..conflicts.config import DSASolverConfig
 from ..conflicts.conflict_graph import ConflictGraph
 from ..conflicts.solver import DSASolver
 from ..eval.evaluator import Evaluator
@@ -23,14 +21,14 @@ log = logging.getLogger(__name__)
 class MofiLSRoutingAlgorithm(RoutingAlgorithm):
     base: RoutingAlgorithm
     evaluator: Evaluator
-    dsa_solver: DSASolverConfig
+    dsa_solver: DSASolver
     f_max: int
 
     def __init__(
         self,
         base: RoutingAlgorithm,
         evaluator: Evaluator,
-        dsa_solver: DSASolverConfig,
+        dsa_solver: DSASolver,
         f_max: int = 100,
     ) -> None:
         super().__init__()
@@ -49,8 +47,7 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
         routes = self.base.route_instance(inst, content_placement)
         flattened_routes = [r for route in routes for r in route]
         conflict_graph = ConflictGraph(inst, routes)
-        dsa_solver = cast(DSASolver, instantiate(self.dsa_solver, conflict_graph))
-        indices, mofi = dsa_solver.solve()
+        indices, mofi = self.dsa_solver.solve(conflict_graph)
         requests_with_mofi = {
             i
             for i, (a, b) in enumerate(zip(indices, conflict_graph.num_fses))
@@ -98,13 +95,13 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
 
 class GreedyLSRoutingAlgorithm(MofiLSRoutingAlgorithm):
     def __init__(
-        self, evaluator: Evaluator, dsa_solver: DSASolverConfig, **_: object
+        self, evaluator: Evaluator, dsa_solver: DSASolver, **_: object
     ) -> None:
         super().__init__(GreedyRoutingAlgorithm(), evaluator, dsa_solver)
 
 
 class FlowLSRoutingAlgorithm(MofiLSRoutingAlgorithm):
     def __init__(
-        self, evaluator: Evaluator, dsa_solver: DSASolverConfig, **_: object
+        self, evaluator: Evaluator, dsa_solver: DSASolver, **_: object
     ) -> None:
         super().__init__(FlowRoutingAlgorithm(), evaluator, dsa_solver)
