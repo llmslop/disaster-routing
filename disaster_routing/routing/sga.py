@@ -289,67 +289,72 @@ class Individual:
             return None
 
 
-class SGA:
-    inst: Instance
-    content_placement: dict[int, set[int]]
-    evaluator: FitnessEvaluator
+class SGARoutingAlgorithm(RoutingAlgorithm):
+    evaluator: Evaluator
     random: Random
+    dsa_solver: DSASolverConfig
+    num_gens: int
     pop_size: int
     cr_rate: float
     mut_rate: float
     cr_num_retries_per_req: int
     mut_num_retries_per_req: int
     elitism_rate: float
-    dist_map: dict[ilist[int], dict[int, float]]
 
     def __init__(
         self,
-        inst: Instance,
-        evaluator: FitnessEvaluator,
-        content_placement: dict[int, set[int]],
-        random: Random,
+        evaluator: Evaluator,
+        random: RandomConfig,
+        dsa_solver: DSASolverConfig,
+        num_gens: int,
         pop_size: int,
         cr_rate: float,
         mut_rate: float,
         cr_num_retries_per_req: int,
         mut_num_retries_per_req: int,
         elitism_rate: float,
+        **kwargs: object,
     ):
-        self.inst = inst
-        self.content_placement = content_placement
         self.evaluator = evaluator
-        self.random = random
+        self.random = instantiate(random)
+        self.dsa_solver = dsa_solver
+        self.num_gens = num_gens
         self.pop_size = pop_size
         self.cr_rate = cr_rate
         self.mut_rate = mut_rate
         self.cr_num_retries_per_req = cr_num_retries_per_req
         self.mut_num_retries_per_req = mut_num_retries_per_req
         self.elitism_rate = elitism_rate
-        log.debug("Generating initial population...")
-        self.dist_map = generate_dist_map(
-            inst.topology.graph,
-            {dc for dcs in content_placement.values() for dc in dcs},
-        )
-        self.population: list[Individual] = [
-            Individual.random(self.random, inst, self.dist_map, content_placement)
-            for _ in range(pop_size)
-        ]
 
-    def select(self) -> list[Individual]:
+    def select(
+        self, population: list[Individual], fitness_evaluator: FitnessEvaluator
+    ) -> list[Individual]:
         # Tournament selection
         tournament_size = 3
         selected: list[Individual] = []
         for _ in range(self.pop_size):
-            competitors = self.random.stdlib.sample(self.population, tournament_size)
-            winner = self.best(competitors)
+            competitors = self.random.stdlib.sample(population, tournament_size)
+            winner = self.best(competitors, fitness_evaluator)
             selected.append(winner)
         return selected
 
-    def evolve(self, generations: int) -> None:
+    def evolve(
+        self, inst: Instance, content_placement: dict[int, set[int]], generations: int
+    ) -> tuple[list[Individual], FitnessEvaluator]:
+        log.debug("Generating initial population...")
+        dist_map = generate_dist_map(
+            inst.topology.graph,
+            {dc for dcs in content_placement.values() for dc in dcs},
+        )
+        fitness_evaluator = FitnessEvaluator(inst, self.evaluator, self.dsa_solver)
+        population: list[Individual] = [
+            Individual.random(self.random, inst, dist_map, content_placement)
+            for _ in range(self.pop_size)
+        ]
         cr_success_rate = SuccessRateStats()
         mut_success_rate = SuccessRateStats()
         for gen in range(generations):
-            selected = self.select()
+            selected = self.select(population, fitness_evaluator)
             next_population: list[Individual] = []
 
             # elitism selection
@@ -358,8 +363,8 @@ class SGA:
             )  # configurable rate, at least 1
             next_population.extend(
                 sorted(
-                    self.population,
-                    key=lambda ind: ind.fitness(self.evaluator),
+                    population,
+                    key=lambda ind: ind.fitness(fitness_evaluator),
                 )[:elitism_count]
             )
 
@@ -370,8 +375,8 @@ class SGA:
                 if self.random.stdlib.random() < self.cr_rate:
                     child = parent1.crossover(
                         self.random,
-                        self.inst,
-                        self.content_placement,
+                        inst,
+                        content_placement,
                         parent2,
                         self.cr_num_retries_per_req,
                     )
@@ -382,9 +387,9 @@ class SGA:
                 if self.random.stdlib.random() < self.mut_rate:
                     child = child.mutate(
                         self.random,
-                        self.inst,
-                        self.dist_map,
-                        self.content_placement,
+                        inst,
+                        dist_map,
+                        content_placement,
                         self.mut_rate,
                         self.mut_num_retries_per_req,
                     )
@@ -403,7 +408,7 @@ class SGA:
                 SL(
                     "Fitness eval count",
                     gen=gen,
-                    count=self.evaluator.fitness_eval_count,
+                    count=fitness_evaluator.fitness_eval_count,
                 )
             )
             log.debug(
@@ -412,74 +417,31 @@ class SGA:
                     gen=gen,
                     indv=[
                         [r.node_list for r in routes]
-                        for routes in self.best().all_routes
+                        for routes in self.best(
+                            population, fitness_evaluator
+                        ).all_routes
                     ],
-                    fitness=self.best().fitness(self.evaluator),
+                    fitness=self.best(population, fitness_evaluator).fitness(
+                        fitness_evaluator
+                    ),
                 )
             )
-            self.population = next_population
+            population = next_population
+        return population, fitness_evaluator
 
-    def best(self, collection: list[Individual] | None = None) -> Individual:
-        collection = collection if collection is not None else self.population
-        return min(collection, key=lambda ind: ind.fitness(self.evaluator))
-
-
-class SGARoutingAlgorithm(RoutingAlgorithm):
-    dsa_solver: DSASolverConfig
-    evaluator: Evaluator
-
-    num_gens: int
-    pop_size: int
-    cr_rate: float
-    mut_rate: float
-    cr_num_retries_per_req: int
-    mut_num_retries_per_req: int
-    elitism_rate: float
-    random: Random
-
-    def __init__(
-        self,
-        evaluator: Evaluator,
-        dsa_solver: DSASolverConfig,
-        num_gens: int,
-        pop_size: int,
-        cr_rate: float,
-        mut_rate: float,
-        cr_num_retries_per_req: int,
-        mut_num_retries_per_req: int,
-        elitism_rate: float,
-        random: RandomConfig,
-        **_: object,
-    ):
-        self.dsa_solver = dsa_solver
-        self.evaluator = evaluator
-        self.num_gens = num_gens
-        self.pop_size = pop_size
-        self.cr_rate = cr_rate
-        self.mut_rate = mut_rate
-        self.cr_num_retries_per_req = cr_num_retries_per_req
-        self.mut_num_retries_per_req = mut_num_retries_per_req
-        self.elitism_rate = elitism_rate
-        self.random = instantiate(random)
+    def best(
+        self, collection: list[Individual], fitness_evaluator: FitnessEvaluator
+    ) -> Individual:
+        return min(collection, key=lambda ind: ind.fitness(fitness_evaluator))
 
     @override
     def route_instance(
         self, inst: Instance, content_placement: dict[int, set[int]]
     ) -> ilist[ilist[Route]]:
-        sga = SGA(
-            inst,
-            FitnessEvaluator(inst, self.evaluator, self.dsa_solver),
-            content_placement,
-            self.random,
-            self.pop_size,
-            self.cr_rate,
-            self.mut_rate,
-            self.cr_num_retries_per_req,
-            self.mut_num_retries_per_req,
-            self.elitism_rate,
+        population, fitness_evaluator = self.evolve(
+            inst, content_placement, self.num_gens
         )
-        sga.evolve(self.num_gens)
-        return sga.best().all_routes
+        return self.best(population, fitness_evaluator).all_routes
 
     @override
     def route_request(self, req: Request, top: Topology, dst: set[int]) -> ilist[Route]:
