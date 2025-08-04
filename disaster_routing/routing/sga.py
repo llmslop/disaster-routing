@@ -1,10 +1,10 @@
 #!/bin/env python3
-from itertools import combinations
-import networkx as nx
 from functools import cache
 import logging
 from math import isnan
 from typing import Callable, override
+
+from disaster_routing.routing.genpath import PathGenerator
 
 from ..conflicts.conflict_graph import ConflictGraph
 from ..conflicts.solver import DSASolver
@@ -12,7 +12,6 @@ from ..eval.evaluator import Evaluator
 from ..instances.instance import Instance
 from ..instances.request import Request
 from ..topologies.topology import Topology
-from ..topologies.graphs import Graph
 from ..utils.success_stats import SuccessRateStats
 from ..utils.structlog import SL
 from ..utils.ilist import ilist
@@ -20,61 +19,6 @@ from ..random.random import Random
 from .routing_algo import InfeasibleRouteError, Route, RoutingAlgorithm
 
 log = logging.getLogger(__name__)
-
-
-def power_set(s: set[int]) -> set[ilist[int]]:
-    return {
-        tuple(sorted(subset))
-        for r in range(1, len(s) + 1)
-        for subset in combinations(s, r)
-    }
-
-
-def generate_dist_map(
-    graph: Graph, dcs: set[int]
-) -> dict[ilist[int], dict[int, float]]:
-    return {
-        dc_subset: dict(
-            nx.multi_source_dijkstra_path_length(graph, dc_subset, weight=None)
-        )
-        for dc_subset in power_set(dcs)
-    }
-
-
-def randomized_dfs(
-    random: Random,
-    graph: Graph,
-    dist_map: dict[int, float],
-    start: int,
-    end: list[int],
-    visited: set[int] | None = None,
-    path: list[int] | None = None,
-) -> list[int] | None:
-    if visited is None:
-        visited = set()
-    if path is None:
-        path = []
-
-    visited.add(start)
-    path.append(start)
-
-    if start in end:
-        return path.copy()
-
-    neighbors = list(graph.adj[start])
-    neighbors.sort(key=lambda node: dist_map[node] * 0.5 + random.stdlib.random())
-
-    for neighbor in neighbors:
-        if neighbor not in visited:
-            result = randomized_dfs(
-                random, graph, dist_map, neighbor, end, visited, path
-            )
-            if result is not None:
-                return result
-
-    _ = path.pop()
-    visited.remove(start)
-    return None
 
 
 class FitnessEvaluator:
@@ -121,32 +65,18 @@ class Individual:
     def random(
         random: Random,
         inst: Instance,
-        dist_map: dict[ilist[int], dict[int, float]],
-        content_placement: dict[int, set[int]],
+        pathgen: PathGenerator,
     ) -> "Individual":
         all_routes: list[ilist[Route]] = [() for _ in inst.requests]
-        num_retries = 0
+        total_retries = 0
         for k, req in enumerate(inst.requests):
-            while True:
-                all_routes[k] = ()
-                dcs = set(content_placement[req.content_id])
-                while len(dcs) > 0:
-                    route = Individual.generate_new_route(
-                        random,
-                        inst,
-                        dist_map[tuple(sorted(dcs))],
-                        req,
-                        all_routes[k],
-                        tuple(dcs),
-                    )
-                    num_retries += 1
-                    if route is None:
-                        break
-                    all_routes[k] = all_routes[k] + (route,)
-                    dcs.remove(route.node_list[-1])
-                if len(all_routes[k]) >= 2:
-                    break
-        log.debug(SL("Finished generating random individual", num_retries=num_retries))
+            routes, num_retries = pathgen.generate_request_routes(random, req)
+            assert routes is not None
+            all_routes[k] = routes
+            total_retries += num_retries
+        log.debug(
+            SL("Finished generating random individual", total_retries=total_retries)
+        )
         return Individual(tuple(all_routes))
 
     def crossover(
@@ -162,49 +92,12 @@ class Individual:
             all_routes.append(random.stdlib.choice([r1, r2]))
         return Individual(tuple(all_routes))
 
-    @staticmethod
-    def shorten_route(route: list[int], dcs: ilist[int]) -> list[int]:
-        k = next(i for i in range(len(route)) if route[i] in dcs)
-        return route[: k + 1]
-
-    @staticmethod
-    def generate_new_route(
-        random: Random,
-        inst: Instance,
-        dist_map: dict[int, float],
-        req: Request,
-        routes: ilist[Route],
-        dcs: ilist[int],
-    ) -> Route | None:
-        topology = inst.topology.copy()
-        for dz in topology.dzs:
-            if (
-                any(dz.affects_path(route.node_list) for route in routes)
-                and req.source not in dz.nodes
-            ):
-                dz.remove_from_graph(topology.graph)
-        avail_dcs = list(dcs)
-        while len(avail_dcs) > 0:
-            route = randomized_dfs(
-                random, topology.graph, dist_map, req.source, avail_dcs
-            )
-            if route is None:
-                break
-            route = Individual.shorten_route(route, dcs)
-            try:
-                return Route(inst.topology, ilist[int](route))
-            except InfeasibleRouteError:
-                if route[-1] in avail_dcs:
-                    avail_dcs.remove(route[-1])
-        return None
-
     def mutate(
         self,
         random: Random,
         inst: Instance,
-        dist_map: dict[ilist[int], dict[int, float]],
+        pathgen: PathGenerator,
         content_placement: dict[int, set[int]],
-        mut_rate: float,
         num_retries_per_req: int,
     ) -> "Individual | None":
         try:
@@ -225,16 +118,10 @@ class Individual:
                 dcs = content_placement[inst.requests[k].content_id].difference(
                     route.node_list[-1] for route in all_routes[k]
                 )
+
                 # try to generate new route
-                new_route = Individual.generate_new_route(
-                    random,
-                    inst,
-                    dist_map[
-                        tuple(sorted(content_placement[inst.requests[k].content_id]))
-                    ],
-                    inst.requests[k],
-                    all_routes[k],
-                    tuple(dcs),
+                new_route = pathgen.generate_request_route(
+                    random, inst.requests[k], all_routes[k], dcs
                 )
                 if new_route is None:
                     del chances["new"]
@@ -246,28 +133,11 @@ class Individual:
                         assert new_route is not None
                         all_routes[k] = all_routes[k] + (new_route,)
                     case "reroute":
-                        routes: ilist[Route] = ()
-                        dcs = set(content_placement[inst.requests[k].content_id])
-                        for _ in range(num_retries_per_req):
-                            while len(dcs) > 0:
-                                route = Individual.generate_new_route(
-                                    random,
-                                    inst,
-                                    dist_map[tuple(sorted(dcs))],
-                                    inst.requests[k],
-                                    routes,
-                                    tuple(dcs),
-                                )
-                                if route is None or random.stdlib.random() < 0.25:
-                                    break
-                                routes = routes + (route,)
-                                dcs.remove(route.node_list[-1])
-                            if len(routes) < 2:
-                                routes = ()
-                                continue
-                        if len(routes) < 2:
-                            return None
-                        all_routes[k] = routes
+                        routes, _ = pathgen.generate_request_routes(
+                            random, inst.requests[k], num_retries_per_req
+                        )
+                        if routes is not None:
+                            all_routes[k] = routes
                     case "prune":
                         route_list = list(all_routes[k])
                         _ = route_list.pop(
@@ -336,14 +206,10 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
         self, inst: Instance, content_placement: dict[int, set[int]], generations: int
     ) -> tuple[list[Individual], FitnessEvaluator]:
         log.debug("Generating initial population...")
-        dist_map = generate_dist_map(
-            inst.topology.graph,
-            {dc for dcs in content_placement.values() for dc in dcs},
-        )
         fitness_evaluator = FitnessEvaluator(inst, self.evaluator, self.dsa_solver)
+        pathgen = PathGenerator(inst.topology, content_placement)
         population: list[Individual] = [
-            Individual.random(self.random, inst, dist_map, content_placement)
-            for _ in range(self.pop_size)
+            Individual.random(self.random, inst, pathgen) for _ in range(self.pop_size)
         ]
         cr_success_rate = SuccessRateStats()
         mut_success_rate = SuccessRateStats()
@@ -382,9 +248,8 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
                     child = child.mutate(
                         self.random,
                         inst,
-                        dist_map,
+                        pathgen,
                         content_placement,
-                        self.mut_rate,
                         self.mut_num_retries_per_req,
                     )
                     mut_success_rate.update(child is not None)
