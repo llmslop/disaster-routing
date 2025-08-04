@@ -31,8 +31,9 @@ class FPGADSASolver(DSASolver):
                 key=lambda node: max(
                     (
                         start_indices[prev] + conflict_graph.num_fses[prev]
-                        for prev in ordering
-                        if conflict_graph.graph.has_edge(node, prev)
+                        for prev in set(conflict_graph.graph.adj[node]).intersection(
+                            ordering
+                        )
                     ),
                     default=0,
                 ),
@@ -40,8 +41,9 @@ class FPGADSASolver(DSASolver):
             start_indices[node] = max(
                 (
                     start_indices[prev] + conflict_graph.num_fses[prev]
-                    for prev in ordering
-                    if conflict_graph.graph.has_edge(node, prev)
+                    for prev in set(conflict_graph.graph.adj[node]).intersection(
+                        ordering
+                    )
                 ),
                 default=0,
             )
