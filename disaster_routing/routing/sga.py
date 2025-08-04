@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 
 
 def generate_dist_map(
-    graph: Graph, content_placement: dict[int, list[int]]
+    graph: Graph, content_placement: dict[int, set[int]]
 ) -> dict[int, dict[int, float]]:
     return {
         content: dict(nx.multi_source_dijkstra_path_length(graph, dcs, weight=None))
@@ -117,7 +117,7 @@ class Individual:
         random: Random,
         inst: Instance,
         dist_map: dict[int, dict[int, float]],
-        content_placement: dict[int, list[int]],
+        content_placement: dict[int, set[int]],
     ) -> "Individual":
         all_routes: list[ilist[Route]] = [() for _ in inst.requests]
         num_retries = 0
@@ -148,7 +148,7 @@ class Individual:
         self,
         random: Random,
         inst: Instance,
-        content_placement: dict[int, list[int]],
+        content_placement: dict[int, set[int]],
         other: "Individual",
         num_retries_per_req: int,
     ) -> "Individual | None":
@@ -198,7 +198,7 @@ class Individual:
         random: Random,
         inst: Instance,
         dist_map: dict[int, dict[int, float]],
-        content_placement: dict[int, list[int]],
+        content_placement: dict[int, set[int]],
         mut_rate: float,
         num_retries_per_req: int,
     ) -> "Individual | None":
@@ -217,7 +217,7 @@ class Individual:
                 if len(all_routes[k]) <= 2:
                     del chances["prune"]
 
-                dcs = set(content_placement[inst.requests[k].content_id]).difference(
+                dcs = content_placement[inst.requests[k].content_id].difference(
                     route.node_list[-1] for route in all_routes[k]
                 )
                 # try to generate new route
@@ -278,7 +278,7 @@ class Individual:
 
 class SGA:
     inst: Instance
-    content_placement: dict[int, list[int]]
+    content_placement: dict[int, set[int]]
     evaluator: FitnessEvaluator
     random: Random
     pop_size: int
@@ -293,7 +293,7 @@ class SGA:
         self,
         inst: Instance,
         evaluator: FitnessEvaluator,
-        content_placement: dict[int, list[int]],
+        content_placement: dict[int, set[int]],
         random: Random,
         pop_size: int,
         cr_rate: float,
@@ -448,7 +448,7 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
 
     @override
     def route_instance(
-        self, inst: Instance, content_placement: dict[int, list[int]]
+        self, inst: Instance, content_placement: dict[int, set[int]]
     ) -> ilist[ilist[Route]]:
         sga = SGA(
             inst,
@@ -466,7 +466,5 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
         return sga.best().all_routes
 
     @override
-    def route_request(
-        self, req: Request, top: Topology, dst: list[int]
-    ) -> ilist[Route]:
+    def route_request(self, req: Request, top: Topology, dst: set[int]) -> ilist[Route]:
         raise NotImplementedError()

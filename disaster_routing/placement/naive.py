@@ -11,14 +11,14 @@ log = logging.getLogger(__name__)
 
 class NaiveContentPlacement(ContentPlacementStrategy):
     @override
-    def place_content(self, inst: Instance) -> dict[int, list[int]]:
+    def place_content(self, inst: Instance) -> dict[int, set[int]]:
         dcs = self.sort_avail_dc_positions(inst.possible_dc_positions, inst)[
             : inst.dc_count
         ]
         max_paths = self.max_num_paths(inst)
         log.debug(SL("Max number of paths per content", max_paths=max_paths))
         return {
-            content: list(self.sort_content_dc_positions(dcs, inst, content)[:num])
+            content: set(self.sort_content_dc_positions(dcs, inst, content)[:num])
             for content, num in max_paths.items()
         }
 
