@@ -37,7 +37,7 @@ class MainConfig:
     defaults: list[Any] = field(
         default_factory=lambda: [
             "_self_",
-            {"dsa_solver": "fpga"},
+            {"dsa_solver": "ga"},
             {"eval": "weightedsum"},
             {"content_placement": "greedy"},
             {"instance/random": "unseeded"},
