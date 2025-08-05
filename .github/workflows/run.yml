@@ -1,4 +1,4 @@
-name: Run on small test instances
+name: Run on test instances
 
 on:
   push:
@@ -10,6 +10,14 @@ jobs:
   run-instances:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        pattern:
+          - "0010-"
+          - "00[25]0"
+          - "nsfnet-0100-0"
+          - "nsfnet-0100-1"
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -17,8 +25,11 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Run algorithm on small test instances
-        run: scripts/run_all.sh --pattern=0010- +router=greedy,flow,greedy+ls,flow+ls,sga
+      - name: Solve via simple algorithms
+        run: scripts/run_all.sh --pattern=${{ matrix.pattern }} +router=greedy,flow,greedy+ls,flow+ls
+
+      - name: Solve via SGA
+        run: scripts/run_all.sh --pattern=${{ matrix.pattern }} +router=sga approximate_dsa_solver=fpga
 
       - name: Process results
         run: mkdir multirun/results && uv run scripts/collect_logs.py multirun | uv run scripts/process_results.py > multirun/results/processed.xlsx

@@ -55,10 +55,10 @@ class FPGADSASolverConfig(DSASolverConfig):
     random: RandomConfig = MISSING
 
 
-def register_dsa_solver_configs():
+def register_dsa_solver_configs(group: str = "dsa_solver"):
     cs = ConfigStore.instance()
-    cs.store(group="dsa_solver", name="ga", node=GADSASolverConfig)
-    cs.store(group="dsa_solver", name="fpga", node=FPGADSASolverConfig)
-    cs.store(group="dsa_solver", name="npm", node=NPMDSASolverConfig)
+    cs.store(group=group, name="ga", node=GADSASolverConfig)
+    cs.store(group=group, name="fpga", node=FPGADSASolverConfig)
+    cs.store(group=group, name="npm", node=NPMDSASolverConfig)
 
-    register_random_configs("dsa_solver")
+    register_random_configs(group)
