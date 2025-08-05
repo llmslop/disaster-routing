@@ -68,7 +68,7 @@ class Route:
 class RoutingAlgorithm(ABC):
     @abstractmethod
     def route_request(
-        self, req: Request, top: Topology, dst: list[int]
+        self, req: Request, top: Topology, dst: set[int]
     ) -> ilist[Route]: ...
 
     def check_solution(self, req: Request, dst: Iterable[int], routes: ilist[Route]):
@@ -94,7 +94,7 @@ class RoutingAlgorithm(ABC):
         return mean(len(route.node_list) - 1 for route in routes)
 
     def route_instance(
-        self, inst: Instance, content_placement: dict[int, list[int]]
+        self, inst: Instance, content_placement: dict[int, set[int]]
     ) -> ilist[ilist[Route]]:
         return tuple(
             self.route_request(req, inst.topology, content_placement[req.content_id])

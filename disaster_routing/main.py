@@ -105,7 +105,6 @@ def my_main(cfg: MainConfig):
                 cfg.router,
                 evaluator=evaluator,
                 dsa_solver=cfg.dsa_solver,
-                _recursive_=False,
             ),
         )
 
@@ -132,10 +131,10 @@ def my_main(cfg: MainConfig):
             )
 
             conflict_graph = ConflictGraph(instance, all_routes)
-            dsa_solver = cast(DSASolver, instantiate(cfg.dsa_solver, conflict_graph))
-            start_indices, mofi = dsa_solver.solve()
+            dsa_solver = cast(DSASolver, instantiate(cfg.dsa_solver))
+            start_indices, mofi = dsa_solver.solve(conflict_graph)
             if cfg.safety_checks:
-                dsa_solver.check(start_indices)
+                dsa_solver.check(conflict_graph, start_indices)
             log.debug(
                 SL(
                     "DSA results",
