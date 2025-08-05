@@ -18,6 +18,7 @@ from ..utils.structlog import SL
 from ..utils.ilist import ilist
 from ..random.random import Random
 from .routing_algo import InfeasibleRouteError, Route, RoutingAlgorithm
+from .flow import FlowRoutingAlgorithm
 
 log = logging.getLogger(__name__)
 
@@ -344,8 +345,19 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
         fitness_evaluator = FitnessEvaluator(inst, self.evaluator, self.dsa_solver)
         population: list[Individual] = [
             Individual.random(self.random, inst, dist_map, content_placement)
-            for _ in range(self.pop_size)
+            for _ in range(self.pop_size - 1)
         ]
+        try:
+            population.append(
+                Individual(
+                    FlowRoutingAlgorithm().route_instance(inst, content_placement)
+                )
+            )
+        except InfeasibleRouteError:
+            population.append(
+                Individual.random(self.random, inst, dist_map, content_placement)
+            )
+
         cr_success_rate = SuccessRateStats()
         mut_success_rate = SuccessRateStats()
         for gen in range(generations):
