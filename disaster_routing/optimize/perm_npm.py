@@ -7,7 +7,7 @@ from .best import BestRecord
 
 def permutation_npm(
     random: Random,
-    n: int,
+    items: set[int],
     objective: Callable[[tuple[int]], int],
     initial_solution: tuple[int, ...] = (),
     iter_count: int = 1000,
@@ -18,11 +18,11 @@ def permutation_npm(
     record = BestRecord[tuple[int, ...], int](objective_fn)
 
     sol = initial_solution
-    if len(sol) == n:
+    if len(sol) == len(items):
         _ = record.update(sol)
 
     def random_from_prefix(prefix: tuple[int, ...]) -> tuple[int, ...]:
-        remaining = list(set(range(n)).difference(set(prefix)))
+        remaining = list(items.difference(prefix))
         random.stdlib.shuffle(remaining)
         return prefix + tuple(remaining)
 
@@ -34,7 +34,7 @@ def permutation_npm(
             sols.append([random_from_prefix(sol[:-1]) for _ in range(k)])
         else:
             sols.append([])
-        for x in set(range(n)).difference(set(sol)):
+        for x in items.difference(set(sol)):
             sols.append([random_from_prefix(sol + (x,)) for _ in range(k)])
         return sols
 
@@ -67,7 +67,7 @@ def permutation_npm(
                 sol = min(
                     samples[best_sample_idx], key=lambda s: objective_fn(tuple(s))
                 )[: len(sol) + 1]
-                if len(sol) == n:
+                if len(sol) == len(items):
                     _ = record.update(sol)
 
     best, cost = record.get()
