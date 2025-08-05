@@ -37,6 +37,12 @@ except ImportError:
     color_enabled = False
 
 
+def json_default(obj: object) -> object:
+    if isinstance(obj, set):
+        return list(obj)
+    raise TypeError
+
+
 class StructLog:
     message: str
     kwargs: dict[str, object]
@@ -49,7 +55,11 @@ class StructLog:
     def __str__(self) -> str:
         return (
             f"{reset_all}{bright}{self.message}{reset_all}"
-            + f"{white}{dim} >>> {reset_all}{colorize(json.dumps(self.kwargs, ensure_ascii=False))}"
+            + f"{white}{dim} >>> {reset_all}{
+                colorize(
+                    json.dumps(self.kwargs, ensure_ascii=False, default=json_default)
+                )
+            }"
             + f"{reset_all}"
         )
 

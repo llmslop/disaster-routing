@@ -573,7 +573,7 @@ class ILPCDP:
         self,
         all_routes: ilist[ilist[Route]],
         start_indices: ilist[int],
-        content_placement: dict[int, list[int]],
+        content_placement: dict[int, set[int]],
         mofi: int | None = None,
     ) -> None:
         values: dict[str, int] = {}

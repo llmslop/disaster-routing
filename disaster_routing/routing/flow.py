@@ -146,9 +146,7 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
         pass
 
     @override
-    def route_request(
-        self, req: Request, top: Topology, dst: list[int]
-    ) -> ilist[Route]:
+    def route_request(self, req: Request, top: Topology, dst: set[int]) -> ilist[Route]:
         assert len(dst) >= 2
 
         best_route_set: ilist[Route] | None = None
