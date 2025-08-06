@@ -70,7 +70,7 @@ jobs:
       - name: Process results
         run: |
           mkdir -p multirun/results
-          uv run scripts/collect_logs.py multirun/* | uv run scripts/process_results.py > multirun/results/processed.xlsx
+          uv run scripts/collect_logs.py multirun/log* | uv run scripts/process_results.py > multirun/results/processed.xlsx
 
       - name: Upload output as artifact
         uses: actions/upload-artifact@v4
