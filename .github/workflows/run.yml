@@ -63,7 +63,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: multirun
-          merge-multiple: true
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -71,7 +70,7 @@ jobs:
       - name: Process results
         run: |
           mkdir -p multirun/results
-          uv run scripts/collect_logs.py multirun | uv run scripts/process_results.py > multirun/results/processed.xlsx
+          uv run scripts/collect_logs.py multirun/* | uv run scripts/process_results.py > multirun/results/processed.xlsx
 
       - name: Upload output as artifact
         uses: actions/upload-artifact@v4
