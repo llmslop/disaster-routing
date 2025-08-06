@@ -31,7 +31,7 @@ class GADSASolver(DSASolver):
     def solve_for_odsa_perm(self, conflict_graph: ConflictGraph) -> list[int]:
         best_perm, _ = permutation_genetic_algorithm(
             self.random,
-            len(conflict_graph.graph),
+            set(conflict_graph.graph.nodes),
             lambda x: self.calc_mofi_from_perm(conflict_graph, list(x)),
             population_size=self.pop_size,
             generations=self.generations,

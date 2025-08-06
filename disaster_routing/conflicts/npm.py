@@ -32,7 +32,7 @@ class NPMDSASolver(DSASolver):
         initial_perm = self.fpga.solve_for_odsa_perm(conflict_graph)
         best_perm, _ = permutation_npm(
             self.random,
-            len(conflict_graph.graph),
+            set(conflict_graph.graph.nodes),
             lambda x: self.calc_mofi_from_perm(conflict_graph, list(x)),
             tuple(initial_perm),
             iter_count=self.iter_count,

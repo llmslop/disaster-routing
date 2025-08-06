@@ -21,7 +21,7 @@ class RouteInfo:
 
 class ConflictGraph:
     graph: Graph
-    num_fses: list[int]
+    num_fses: dict[int, int]
     num_total_fs: int
 
     def __init__(self, inst: Instance, routes: ilist[ilist[Route]]):
@@ -46,7 +46,7 @@ class ConflictGraph:
                 if len(set(r1.route.edges()).intersection(set(r2.route.edges()))) != 0:
                     self.graph.add_edge(j, k)
 
-        self.num_fses = list(map(lambda info: info.num_fs, route_infos))
+        self.num_fses = {info.idx: info.num_fs for info in route_infos}
         self.num_total_fs = sum(
             route.num_fs * len(route.route.edges()) for route in route_infos
         )
