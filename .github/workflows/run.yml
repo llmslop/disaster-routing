@@ -1,0 +1,78 @@
+name: Run on test instances
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  run-instances:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - pattern: "0010-"
+            label: "small"
+          - pattern: "00[25]0-"
+            label: "medium"
+          - pattern: "nsfnet-0100-0"
+            label: "large-nsfnet-0"
+          - pattern: "nsfnet-0100-1"
+            label: "large-nsfnet-1"
+
+    name: Run ${{ matrix.label }} instances
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Solve via simple algorithms
+        run: scripts/run_all.sh --pattern=${{ matrix.pattern }} +router=greedy,flow,greedy+ls,flow+ls
+
+      - name: Solve via SGA
+        run: scripts/run_all.sh --pattern=${{ matrix.pattern }} +router=sga approximate_dsa_solver=fpga
+
+      - name: Process results
+        run: mkdir multirun/results && uv run scripts/collect_logs.py multirun | uv run scripts/process_results.py > multirun/results/processed-${{ matrix.label }}.xlsx
+
+      - name: Upload output as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: log-${{ matrix.label }}
+          path: multirun
+          include-hidden-files: true
+  aggregate-results:
+    name: Aggregate instance logs
+    runs-on: ubuntu-latest
+    needs: run-instances
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4  # ← necessary to get your scripts
+
+      - name: Download all artifacts to multirun/
+        uses: actions/download-artifact@v4
+        with:
+          path: multirun
+          merge-multiple: true
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Process results
+        run: |
+          mkdir -p multirun/results
+          uv run scripts/collect_logs.py multirun | uv run scripts/process_results.py > multirun/results/processed.xlsx
+
+      - name: Upload output as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: log
+          path: multirun
+          include-hidden-files: true
+
