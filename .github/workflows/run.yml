@@ -69,3 +69,10 @@ jobs:
           mkdir -p multirun/results
           uv run scripts/collect_logs.py multirun | uv run scripts/process_results.py > multirun/results/processed.xlsx
 
+      - name: Upload output as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: log
+          path: multirun
+          include-hidden-files: true
+
