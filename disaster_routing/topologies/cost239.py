@@ -4,7 +4,7 @@ from statistics import mean
 from .graphs import DiGraph
 
 
-def nsfnet(enable_cross_edges: bool = False) -> Topology:
+def cost239(enable_cross_edges: bool = False) -> Topology:
     graph = DiGraph()
     graph.add_nodes_from(range(1, 12, 1))
     assert len(graph.nodes) == 11
@@ -75,4 +75,4 @@ def nsfnet(enable_cross_edges: bool = False) -> Topology:
 
 
 if __name__ == "__main__":
-    _ = nsfnet()
+    _ = cost239()

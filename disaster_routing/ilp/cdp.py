@@ -291,14 +291,17 @@ class ILPCDP:
                         )
 
         for r_idx, r in enumerate(inst.requests):
-            for k in range(max_paths[r_idx]):
-                for z_idx, z in enumerate(inst.topology.dzs):
-                    if r.source in z.nodes:
-                        continue
-                    self.problem += (
-                        self.alpha_k_rz[(k, r_idx, z_idx)] <= 1,
-                        f"Disaster-zone-disjoint path constraints (8:{r_idx}:{z_idx}:{k})",
+            for z_idx, z in enumerate(inst.topology.dzs):
+                if r.source in z.nodes:
+                    continue
+                self.problem += (
+                    lpSum(
+                        self.alpha_k_rz[(k, r_idx, z_idx)]
+                        for k in range(max_paths[r_idx])
                     )
+                    <= 1,
+                    f"Disaster-zone-disjoint path constraints (8:{r_idx}:{z_idx})",
+                )
 
         for r_idx, r in enumerate(inst.requests):
             for k in range(max_paths[r_idx]):
