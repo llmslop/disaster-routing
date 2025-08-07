@@ -74,10 +74,14 @@ class MofiLSRoutingAlgorithm(RoutingAlgorithm):
                 ls_inst = inst.remove_edge(edge)
                 try:
                     num_passes += 1
+                    log.debug(
+                        SL("LS pass", iter=iter, num_passes=num_passes, edge=edge)
+                    )
                     ls_routes, ls_edges_with_mofi, total_fs, mofi = (
                         self.route_instance_single_pass(ls_inst, content_placement)
                     )
                     if self.evaluator.evaluate(total_fs, mofi) < best:
+                        log.debug(SL("Improvement found", edge=edge))
                         edges_with_mofi.discard(edge)
                         edges_with_mofi.update(ls_edges_with_mofi)
                         routes = ls_routes

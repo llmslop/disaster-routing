@@ -183,10 +183,11 @@ class Individual:
                 and req.source not in dz.nodes
             ):
                 dz.remove_from_graph(topology.graph)
-        avail_dcs = list(dcs)
+        avail_dcs = set(dcs)
+        avail_dcs.difference_update((route.node_list[-1] for route in routes))
         while len(avail_dcs) > 0:
             route = randomized_dfs(
-                random, topology.graph, dist_map, req.source, avail_dcs
+                random, topology.graph, dist_map, req.source, list(avail_dcs)
             )
             if route is None:
                 break

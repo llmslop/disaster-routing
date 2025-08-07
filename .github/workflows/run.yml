@@ -21,6 +21,10 @@ jobs:
             label: "large-nsfnet-0"
           - pattern: "nsfnet-0100-1"
             label: "large-nsfnet-1"
+          - pattern: "cost239-0100-0"
+            label: "large-cost239-0"
+          - pattern: "cost239-0100-1"
+            label: "large-cost239-1"
 
     name: Run ${{ matrix.label }} instances
 
