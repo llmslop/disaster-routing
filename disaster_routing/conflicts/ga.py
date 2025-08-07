@@ -15,14 +15,12 @@ class GADSASolver(DSASolver):
 
     def __init__(
         self,
-        conflict_graph: ConflictGraph,
         random: Random,
         pop_size: int = 100,
         generations: int = 50,
         mutation_rate: float = 0.2,
         lru_size: int = 10000,
     ):
-        super().__init__(conflict_graph)
         self.pop_size = pop_size
         self.generations = generations
         self.mutation_rate = mutation_rate
@@ -30,11 +28,11 @@ class GADSASolver(DSASolver):
         self.random = random
 
     @override
-    def solve_for_odsa_perm(self) -> list[int]:
+    def solve_for_odsa_perm(self, conflict_graph: ConflictGraph) -> list[int]:
         best_perm, _ = permutation_genetic_algorithm(
             self.random,
-            len(self.conflict_graph.graph),
-            lambda x: self.calc_mofi_from_perm(list(x)),
+            set(conflict_graph.graph.nodes),
+            lambda x: self.calc_mofi_from_perm(conflict_graph, list(x)),
             population_size=self.pop_size,
             generations=self.generations,
             mutation_rate=self.mutation_rate,

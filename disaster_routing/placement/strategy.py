@@ -6,9 +6,9 @@ from ..instances.instance import Instance
 
 class ContentPlacementStrategy(ABC):
     @abstractmethod
-    def place_content(self, inst: Instance) -> dict[int, list[int]]: ...
+    def place_content(self, inst: Instance) -> dict[int, set[int]]: ...
 
-    def verify_placement(self, inst: Instance, placement: dict[int, list[int]]):
+    def verify_placement(self, inst: Instance, placement: dict[int, set[int]]):
         dcs: set[int] = set()
         for _, content_dcs in placement.items():
             dcs.update(content_dcs)

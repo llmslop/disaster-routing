@@ -37,13 +37,15 @@ class MainConfig:
     defaults: list[Any] = field(
         default_factory=lambda: [
             "_self_",
-            {"dsa_solver": "fpga"},
+            {"approximate_dsa_solver": "ga"},
+            {"dsa_solver": "ga"},
             {"eval": "weightedsum"},
             {"content_placement": "greedy"},
             {"instance/random": "unseeded"},
         ]
     )
     router: RoutingAlgorithmConfig | None = None
+    approximate_dsa_solver: DSASolverConfig = MISSING
     dsa_solver: DSASolverConfig = MISSING
     instance: InstanceGeneratorConfig = field(default_factory=InstanceGeneratorConfig)
     eval: EvaluationConfig = MISSING
@@ -62,6 +64,7 @@ cs = ConfigStore.instance()
 cs.store(name="config", node=MainConfig)
 register_evaluator_configs()
 register_dsa_solver_configs()
+register_dsa_solver_configs("approximate_dsa_solver")
 register_routing_algo_configs()
 register_placement_configs()
 register_random_configs("instance")
@@ -104,14 +107,14 @@ def my_main(cfg: MainConfig):
             instantiate(
                 cfg.router,
                 evaluator=evaluator,
-                dsa_solver=cfg.dsa_solver,
-                _recursive_=False,
+                dsa_solver=cfg.approximate_dsa_solver,
             ),
         )
 
         start = time.time()
         try:
             all_routes = router.route_instance(instance, content_placement)
+            all_routes = router.sort_routes(all_routes)
             if cfg.safety_checks:
                 for routes, req in zip(all_routes, instance.requests):
                     router.check_solution(
@@ -131,10 +134,10 @@ def my_main(cfg: MainConfig):
             )
 
             conflict_graph = ConflictGraph(instance, all_routes)
-            dsa_solver = cast(DSASolver, instantiate(cfg.dsa_solver, conflict_graph))
-            start_indices, mofi = dsa_solver.solve()
+            dsa_solver = cast(DSASolver, instantiate(cfg.dsa_solver))
+            start_indices, mofi = dsa_solver.solve(conflict_graph)
             if cfg.safety_checks:
-                dsa_solver.check(start_indices)
+                dsa_solver.check(conflict_graph, start_indices)
             log.debug(
                 SL(
                     "DSA results",
