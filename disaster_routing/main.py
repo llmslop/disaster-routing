@@ -84,7 +84,6 @@ def my_main(cfg: MainConfig):
         cfg.ilp_check = len(instance.requests) <= 50
 
     log.debug(SL("Instance info", instance=instance.to_json()))
-    evaluator = cast(Evaluator, instantiate(cfg.eval))
 
     content_placement_strategy = cast(
         ContentPlacementStrategy, instantiate(cfg.content_placement)
@@ -93,6 +92,11 @@ def my_main(cfg: MainConfig):
     if cfg.safety_checks:
         content_placement_strategy.verify_placement(instance, content_placement)
     log.debug(SL("Content placement", placement=content_placement))
+
+    evaluator = cast(
+        Evaluator,
+        instantiate(cfg.eval, instance=instance, content_placement=content_placement),
+    )
 
     ilp: ILPCDP | None = None
     if cfg.ilp_solve or cfg.ilp_check:

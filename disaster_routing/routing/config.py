@@ -56,12 +56,12 @@ class SGARoutingAlgorithmConfig(RoutingAlgorithmConfig):
     elitism_rate: float = 0.04
 
 
-def register_routing_algo_configs():
+def register_routing_algo_configs(group: str = "router"):
     cs = ConfigStore.instance()
-    cs.store(group="router", name="greedy", node=GreedyRoutingAlgorithmConfig)
-    cs.store(group="router", name="greedy+ls", node=GreedyLocalSearchAlgorithmConfig)
-    cs.store(group="router", name="flow", node=FlowRoutingAlgorithmConfig)
-    cs.store(group="router", name="flow+ls", node=FlowLocalSearchAlgorithmConfig)
-    cs.store(group="router", name="sga", node=SGARoutingAlgorithmConfig)
+    cs.store(group=group, name="greedy", node=GreedyRoutingAlgorithmConfig)
+    cs.store(group=group, name="greedy+ls", node=GreedyLocalSearchAlgorithmConfig)
+    cs.store(group=group, name="flow", node=FlowRoutingAlgorithmConfig)
+    cs.store(group=group, name="flow+ls", node=FlowLocalSearchAlgorithmConfig)
+    cs.store(group=group, name="sga", node=SGARoutingAlgorithmConfig)
 
-    register_random_configs("router")
+    register_random_configs(group)
