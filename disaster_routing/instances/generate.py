@@ -6,13 +6,12 @@ from typing import cast
 from hydra.utils import instantiate
 from omegaconf import MISSING
 
-from disaster_routing.random.config import RandomConfig
-
 from .instance import Instance
 from ..instances.request import Request
 from ..topologies.topology import Topology
 from ..topologies.topologies import get_topology
 from ..random.random import Random
+from ..random.config import RandomConfig
 from ..utils.ilist import ilist
 
 
