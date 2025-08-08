@@ -1,7 +1,6 @@
 from math import isnan
 from typing import override
 
-from ..instances.instance import Instance
 from .evaluator import Evaluator
 
 

@@ -4,13 +4,12 @@ from typing import cast, override
 
 from hydra.utils import instantiate
 
-from disaster_routing.conflicts.config import DSASolverConfig
-from disaster_routing.conflicts.conflict_graph import ConflictGraph
-from disaster_routing.conflicts.solver import DSASolver
-from disaster_routing.routing.config import RoutingAlgorithmConfig
-from disaster_routing.routing.routing_algo import RoutingAlgorithm
-from disaster_routing.utils.structlog import SL
-
+from ..conflicts.config import DSASolverConfig
+from ..conflicts.conflict_graph import ConflictGraph
+from ..conflicts.solver import DSASolver
+from ..routing.config import RoutingAlgorithmConfig
+from ..routing.routing_algo import RoutingAlgorithm
+from ..utils.structlog import SL
 from ..instances.instance import Instance
 from .evaluator import Evaluator
 from .weighted_sum import WeightedSumEvaluator

@@ -4,11 +4,11 @@ from typing import Any
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
 
-from disaster_routing.conflicts.config import (
+from ..conflicts.config import (
     DSASolverConfig,
     register_dsa_solver_configs,
 )
-from disaster_routing.routing.config import (
+from ..routing.config import (
     RoutingAlgorithmConfig,
     register_routing_algo_configs,
 )
