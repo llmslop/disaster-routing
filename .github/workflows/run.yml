@@ -39,7 +39,7 @@ jobs:
         run: scripts/run_all.sh --pattern=${{ matrix.pattern }} +router=greedy,flow,greedy+ls,flow+ls
 
       - name: Solve via SGA
-        run: scripts/run_all.sh --pattern=${{ matrix.pattern }} +router=sga
+        run: scripts/run_all.sh --pattern=${{ matrix.pattern }} +router=sga approximate_dsa_solver.pop_size=50 approximate_dsa_solver.generations=10
 
       - name: Process results
         run: mkdir multirun/results && uv run scripts/collect_logs.py multirun | uv run scripts/process_results.py > multirun/results/processed-${{ matrix.label }}.xlsx
