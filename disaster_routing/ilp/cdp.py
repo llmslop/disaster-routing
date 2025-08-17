@@ -171,7 +171,7 @@ class ILPCDP:
 
         self.problem = LpProblem("CDP", LpMinimize)
 
-        weights = evaluator.get_weights(inst)
+        weights = evaluator.get_weights()
         if weights is None:
             raise ValueError(
                 "Evaluator must provide weights for the objective function"
