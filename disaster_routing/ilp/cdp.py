@@ -572,7 +572,7 @@ class ILPCDP:
     def check_solution(
         self,
         all_routes: ilist[ilist[Route]],
-        start_indices: ilist[int],
+        start_indices: dict[int, int],
         content_placement: dict[int, set[int]],
         mofi: int | None = None,
     ) -> None:

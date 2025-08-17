@@ -1,38 +1,46 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 
 from .conflict_graph import ConflictGraph
 
 
 class DSASolver(ABC):
-    def solve_odsa(self, conflict_graph: ConflictGraph, perm: list[int]) -> list[int]:
-        result = [0 for _ in perm]
+    def solve_odsa(
+        self, conflict_graph: ConflictGraph, perm: list[int]
+    ) -> dict[int, int]:
+        result: dict[int, int] = {}
         for i, node in enumerate(perm):
             start = max(
                 (
                     result[prev] + conflict_graph.num_fses[prev]
-                    for prev in perm[:i]
-                    if conflict_graph.graph.has_edge(node, prev)
+                    for prev in set(conflict_graph.graph.adj[node]).intersection(
+                        perm[:i]
+                    )
                 ),
                 default=0,
             )
-            if len(result) > 0:
-                start = max(start, result[-1])
+            if i > 0:
+                start = max(start, result[perm[i - 1]])
             result[node] = start
 
         return result
 
-    def check(self, conflict_graph: ConflictGraph, sol: list[int]):
+    def check(self, conflict_graph: ConflictGraph, sol: dict[int, int]):
         graph = conflict_graph.graph
         num_fses = conflict_graph.num_fses
-        for i in range(len(graph)):
-            for j in range(i + 1, len(graph)):
+        for i in graph.nodes:
+            for j in graph.nodes:
+                if i >= j:
+                    continue
                 ii = set(range(sol[i], sol[i] + num_fses[i]))
                 ji = set(range(sol[j], sol[j] + num_fses[j]))
                 if graph.has_edge(i, j):
                     assert len(ii.intersection(ji)) == 0
 
-    def calc_mofi(self, conflict_graph: ConflictGraph, sol: list[int]) -> int:
-        return max(a + b for a, b in zip(sol, conflict_graph.num_fses))
+    def calc_mofi(self, conflict_graph: ConflictGraph, sol: dict[int, int]) -> int:
+        return max(
+            sol[n] + conflict_graph.num_fses[n] for n in conflict_graph.graph.nodes
+        )
 
     def calc_mofi_from_perm(
         self, conflict_graph: ConflictGraph, perm: list[int]
@@ -42,6 +50,6 @@ class DSASolver(ABC):
     @abstractmethod
     def solve_for_odsa_perm(self, conflict_graph: ConflictGraph) -> list[int]: ...
 
-    def solve(self, conflict_graph: ConflictGraph) -> tuple[list[int], int]:
+    def solve(self, conflict_graph: ConflictGraph) -> tuple[dict[int, int], int]:
         best = self.solve_odsa(conflict_graph, self.solve_for_odsa_perm(conflict_graph))
         return best, self.calc_mofi(conflict_graph, best)

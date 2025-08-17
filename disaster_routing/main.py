@@ -32,6 +32,10 @@ from .conflicts.config import DSASolverConfig, register_dsa_solver_configs
 from .conflicts.solver import DSASolver
 
 
+def int_dict_to_list(d: dict[int, int]):
+    return [d.get(k, -1) for k in range(max(d) + 1)]
+
+
 @dataclass
 class MainConfig:
     defaults: list[Any] = field(
@@ -141,8 +145,8 @@ def my_main(cfg: MainConfig):
             log.debug(
                 SL(
                     "DSA results",
-                    start_indices=start_indices,
-                    num_fses=conflict_graph.num_fses,
+                    start_indices=int_dict_to_list(start_indices),
+                    num_fses=int_dict_to_list(conflict_graph.num_fses),
                 )
             )
 
@@ -156,7 +160,7 @@ def my_main(cfg: MainConfig):
             )
             if cfg.ilp_check:
                 assert ilp is not None
-                ilp.check_solution(all_routes, tuple(start_indices), content_placement)
+                ilp.check_solution(all_routes, start_indices, content_placement)
         except InfeasibleRouteError:
             log.info(
                 SL(

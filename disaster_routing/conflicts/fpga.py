@@ -66,5 +66,5 @@ class FPGADSASolver(DSASolver):
                 self.solve_perm_with_first(conflict_graph, start)
                 for start in start_indices
             ),
-            key=lambda sol: self.calc_mofi(conflict_graph, sol),
+            key=lambda sol: self.calc_mofi_from_perm(conflict_graph, sol),
         )
