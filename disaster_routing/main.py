@@ -43,7 +43,7 @@ class MainConfig:
             "_self_",
             {"approximate_dsa_solver": "ga"},
             {"dsa_solver": "ga"},
-            {"eval": "weightedsum"},
+            {"eval": "relative"},
             {"content_placement": "greedy"},
             {"instance/random": "unseeded"},
         ]
