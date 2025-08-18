@@ -1,6 +1,7 @@
 from typing import override
 
 from hydra.utils import instantiate
+
 from disaster_routing.conflicts.config import DSASolverConfig
 from disaster_routing.conflicts.conflict_graph import ConflictGraph
 from disaster_routing.conflicts.solver import DSASolver

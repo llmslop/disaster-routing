@@ -2,6 +2,7 @@ import logging
 from typing import override
 
 from hydra.utils import instantiate
+
 from disaster_routing.eval.evaluator import Evaluator
 from disaster_routing.instances.instance import Instance
 from disaster_routing.routing.routing_algo import InfeasibleRouteError

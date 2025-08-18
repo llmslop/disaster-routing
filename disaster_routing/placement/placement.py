@@ -1,13 +1,12 @@
 from typing import cast
-from scipy import optimize as opt
 
-import numpy as np
 import networkx as nx
+import numpy as np
+from scipy import optimize as opt
 from scipy.sparse import dok_matrix
 
-
-from disaster_routing.instances.request import Request
 from disaster_routing.instances.instance import Instance
+from disaster_routing.instances.request import Request
 from disaster_routing.topologies.graphs import DiGraph
 
 

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from disaster_routing.instances.request import Request
 from disaster_routing.instances.instance import Instance
+from disaster_routing.instances.request import Request
 
 
 class ContentPlacementStrategy(ABC):

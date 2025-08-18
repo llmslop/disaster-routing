@@ -2,24 +2,24 @@ import logging
 from math import ceil
 from typing import final
 
-from disaster_routing.eval.evaluator import Evaluator
-from disaster_routing.instances.instance import Instance
-from disaster_routing.instances.modulation import ModulationFormat
-from disaster_routing.routing.routing_algo import Route
-from disaster_routing.utils.ilist import ilist
-from disaster_routing.utils.structlog import SL
-
 from pulp import (
     PULP_CBC_CMD,
     LpAffineExpression,
     LpBinary,
     LpConstraint,
     LpInteger,
+    LpMinimize,
     LpProblem,
     LpVariable,
-    LpMinimize,
     lpSum,
 )
+
+from disaster_routing.eval.evaluator import Evaluator
+from disaster_routing.instances.instance import Instance
+from disaster_routing.instances.modulation import ModulationFormat
+from disaster_routing.routing.routing_algo import Route
+from disaster_routing.utils.ilist import ilist
+from disaster_routing.utils.structlog import SL
 
 log = logging.getLogger(__name__)
 
@@ -228,14 +228,6 @@ class ILPCDP:
                     <= self.R_cr_d[(r.content_id, d)],
                     f"DC assignment and content placement constraints (4:{r_idx}:{d})",
                 )
-        # for r_idx, r in enumerate(inst.requests):
-        #     for d in avail_dcs:
-        #         for k in range(max_paths[r_idx]):
-        #             self.problem += (
-        #                 self.Lambda_k_rd[(k, r_idx, d)]
-        #                 <= self.R_cr_d[(r.content_id, d)],
-        #                 f"DC assignment and content placement constraints (4':{r_idx}:{d}:{k})",
-        #             )
 
         for r_idx, r in enumerate(inst.requests):
             for k in range(max_paths[r_idx]):
@@ -277,7 +269,8 @@ class ILPCDP:
                             self.p_k_ra[(k, r_idx, a_idx)] for a_idx in dz_arcs[z_idx]
                         )
                         >= self.alpha_k_rz[(k, r_idx, z_idx)],
-                        f"Disaster-zone-disjoint path constraints (6:{r_idx}:{z_idx}:{k})",
+                        "Disaster-zone-disjoint path constraints "
+                        + f"(6:{r_idx}:{z_idx}:{k})",
                     )
 
         for r_idx, r in enumerate(inst.requests):
@@ -287,7 +280,8 @@ class ILPCDP:
                         self.problem += (
                             self.alpha_k_rz[(k, r_idx, z_idx)]
                             >= self.p_k_ra[(k, r_idx, a_idx)],
-                            f"Disaster-zone-disjoint path constraints (7:{r_idx}:{z_idx}:{k}:{a_idx})",
+                            "Disaster-zone-disjoint path constraints "
+                            + f"(7:{r_idx}:{z_idx}:{k}:{a_idx})",
                         )
 
         for r_idx, r in enumerate(inst.requests):
@@ -353,7 +347,8 @@ class ILPCDP:
                 for a_idx, a in enumerate(arcs):
                     self.problem += (
                         self.p_k_ra[(k, r_idx, a_idx)] <= self.w_k_r[(k, r_idx)],
-                        f"Adaptive multi-path routing constraints (13:{r_idx}:{k}:{a_idx})",
+                        "Adaptive multi-path routing constraints "
+                        + f"(13:{r_idx}:{k}:{a_idx})",
                     )
         for r_idx, r in enumerate(inst.requests):
             self.problem += (
@@ -404,7 +399,8 @@ class ILPCDP:
                     self.problem += (
                         self.Phi_k_ra[(k, r_idx, a_idx)]
                         <= S * self.p_k_ra[(k, r_idx, a_idx)],
-                        f"Adaptive multi-path routing constraints (19:{r_idx}:{k}:{a_idx})",
+                        "Adaptive multi-path routing constraints "
+                        + f"(19:{r_idx}:{k}:{a_idx})",
                     )
 
         for r_idx, r in enumerate(inst.requests):
@@ -412,7 +408,8 @@ class ILPCDP:
                 for a_idx, _ in enumerate(arcs):
                     self.problem += (
                         self.Phi_k_ra[(k, r_idx, a_idx)] <= self.Phi_k_r[(k, r_idx)],
-                        f"Adaptive multi-path routing constraints (20:{r_idx}:{k}:{a_idx})",
+                        "Adaptive multi-path routing constraints "
+                        + f"(20:{r_idx}:{k}:{a_idx})",
                     )
 
         for r_idx, r in enumerate(inst.requests):
@@ -422,7 +419,8 @@ class ILPCDP:
                         self.Phi_k_ra[(k, r_idx, a_idx)]
                         >= self.Phi_k_r[(k, r_idx)]
                         - S * (1 - self.p_k_ra[(k, r_idx, a_idx)]),
-                        f"Adaptive multi-path routing constraints (21:{r_idx}:{k}:{a_idx})",
+                        "Adaptive multi-path routing constraints "
+                        + f"(21:{r_idx}:{k}:{a_idx})",
                     )
 
         for r_idx, r in enumerate(inst.requests):
@@ -436,7 +434,8 @@ class ILPCDP:
                             + self.p_k_ra[(k_prime, r_idx, a_idx)]
                             - 1
                             <= self.gamma_kkp_r[(k, k_prime, r_idx)],
-                            f"Spectrum allocation constraints (22:{r_idx}:{k}:{k_prime}:{a_idx})",
+                            "Spectrum allocation constraints "
+                            + f"(22:{r_idx}:{k}:{k_prime}:{a_idx})",
                         )
         for r_idx, r in enumerate(inst.requests):
             for k in range(max_paths[r_idx]):
@@ -460,7 +459,8 @@ class ILPCDP:
                                 + self.p_k_ra[(k_prime, r_prime_idx, a_idx)]
                                 - 1
                                 <= self.gamma_kkp_rrp[(k, k_prime, r_idx, r_prime_idx)],
-                                f"Spectrum allocation constraints (24:{r_idx}:{r_prime_idx}:{k}:{k_prime}:{a_idx})",
+                                "Spectrum allocation constraints "
+                                + f"(24:{r_idx}:{r_prime_idx}:{k}:{k_prime}:{a_idx})",
                             )
         for r_idx, _ in enumerate(inst.requests):
             for r_idx_prime, _ in enumerate(inst.requests):
@@ -471,7 +471,8 @@ class ILPCDP:
                         self.problem += (
                             self.gamma_kkp_rrp[(k, k_prime, r_idx, r_idx_prime)]
                             == self.gamma_kkp_rrp[(k_prime, k, r_idx_prime, r_idx)],
-                            f"Spectrum allocation constraints (25:{r_idx}:{r_idx_prime}:{k}:{k_prime})",
+                            "Spectrum allocation constraints "
+                            + f"(25:{r_idx}:{r_idx_prime}:{k}:{k_prime})",
                         )
 
         for r_idx, r in enumerate(inst.requests):
@@ -495,7 +496,8 @@ class ILPCDP:
                             self.beta_kkp_rrp[(k, k_prime, r_idx, r_prime_idx)]
                             + self.beta_kkp_rrp[(k_prime, k, r_prime_idx, r_idx)]
                             == 1,
-                            f"Spectrum allocation constraints (27:{r_idx}:{r_prime_idx}:{k}:{k_prime})",
+                            "Spectrum allocation constraints "
+                            + f"(27:{r_idx}:{r_prime_idx}:{k}:{k_prime})",
                         )
         for r_idx, r in enumerate(inst.requests):
             for k in range(max_paths[r_idx]):
@@ -538,7 +540,8 @@ class ILPCDP:
                                 - self.gamma_kkp_rrp[(k, k_prime, r_idx, r_idx_prime)]
                                 - self.beta_kkp_rrp[(k, k_prime, r_idx, r_idx_prime)]
                             ),
-                            f"Spectrum allocation constraints (30:{r_idx}:{r_idx_prime}:{k}:{k_prime})",
+                            "Spectrum allocation constraints "
+                            + f"(30:{r_idx}:{r_idx_prime}:{k}:{k_prime})",
                         )
 
     def solve(self) -> tuple[float, float]:

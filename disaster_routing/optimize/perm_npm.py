@@ -1,8 +1,8 @@
 from functools import lru_cache
 from typing import Callable
 
-from disaster_routing.random.random import Random
 from disaster_routing.optimize.best import BestRecord
+from disaster_routing.random.random import Random
 
 
 def permutation_npm(

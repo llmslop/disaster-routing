@@ -7,12 +7,12 @@ from hydra.utils import instantiate
 from disaster_routing.conflicts.config import DSASolverConfig
 from disaster_routing.conflicts.conflict_graph import ConflictGraph
 from disaster_routing.conflicts.solver import DSASolver
+from disaster_routing.eval.evaluator import Evaluator
+from disaster_routing.eval.weighted_sum import WeightedSumEvaluator
+from disaster_routing.instances.instance import Instance
 from disaster_routing.routing.config import RoutingAlgorithmConfig
 from disaster_routing.routing.routing_algo import RoutingAlgorithm
 from disaster_routing.utils.structlog import SL
-from disaster_routing.instances.instance import Instance
-from disaster_routing.eval.evaluator import Evaluator
-from disaster_routing.eval.weighted_sum import WeightedSumEvaluator
 
 log = logging.getLogger(__name__)
 

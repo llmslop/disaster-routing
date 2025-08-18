@@ -1,11 +1,11 @@
 from math import ceil
 
-from disaster_routing.routing.routing_algo import Route
+import networkx as nx
+
 from disaster_routing.instances.instance import Instance
+from disaster_routing.routing.routing_algo import Route
 from disaster_routing.topologies.graphs import Graph
 from disaster_routing.utils.ilist import ilist
-
-import networkx as nx
 
 
 class RouteInfo:

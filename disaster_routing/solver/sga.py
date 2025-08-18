@@ -1,25 +1,25 @@
-from itertools import combinations
-import networkx as nx
-from functools import cache
 import logging
+from functools import cache
+from itertools import combinations
 from math import isnan
 from typing import Callable, override
 
-from disaster_routing.routing.flow import FlowRoutingAlgorithm
-from disaster_routing.solver.solution import CDPSolution
-from disaster_routing.solver.solver import CDPSolver
+import networkx as nx
 
 from disaster_routing.conflicts.conflict_graph import ConflictGraph
 from disaster_routing.conflicts.solver import DSASolver
 from disaster_routing.eval.evaluator import Evaluator
 from disaster_routing.instances.instance import Instance
 from disaster_routing.instances.request import Request
-from disaster_routing.topologies.graphs import Graph
-from disaster_routing.utils.success_stats import SuccessRateStats
-from disaster_routing.utils.structlog import SL
-from disaster_routing.utils.ilist import ilist
 from disaster_routing.random.random import Random
+from disaster_routing.routing.flow import FlowRoutingAlgorithm
 from disaster_routing.routing.routing_algo import InfeasibleRouteError, Route
+from disaster_routing.solver.solution import CDPSolution
+from disaster_routing.solver.solver import CDPSolver
+from disaster_routing.topologies.graphs import Graph
+from disaster_routing.utils.ilist import ilist
+from disaster_routing.utils.structlog import SL
+from disaster_routing.utils.success_stats import SuccessRateStats
 
 log = logging.getLogger(__name__)
 

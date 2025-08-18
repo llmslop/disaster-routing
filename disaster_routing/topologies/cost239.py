@@ -1,7 +1,7 @@
-from disaster_routing.topologies.topology import DisasterZone, Topology
 from statistics import mean
 
 from disaster_routing.topologies.graphs import DiGraph
+from disaster_routing.topologies.topology import DisasterZone, Topology
 
 
 def cost239(enable_cross_edges: bool = False) -> Topology:

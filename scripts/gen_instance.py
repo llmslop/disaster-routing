@@ -1,7 +1,7 @@
 #!/bin/env python3
 
-import shutil
 import os
+import shutil
 import sys
 
 dir = "instances/dataset-1"
@@ -32,6 +32,7 @@ for topology, dc_pos in topologies.items():
             code = os.system(cmd)
             if code != 0:
                 raise RuntimeError(
-                    f"Failed to generate instance for {topology} with size {size} and num {num}. Command: {cmd}"
+                    f"Failed to generate instance for {topology} with "
+                    + f"size {size} and num {num}. Command: {cmd}"
                 )
         print(f"Generated {num} instances for topology {topology} with size {size}")

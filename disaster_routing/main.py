@@ -1,34 +1,30 @@
-from dataclasses import dataclass, field
 import logging
 import time
+from dataclasses import dataclass, field
 from typing import Any, cast
 
 import hydra
-from hydra.utils import instantiate
 from hydra.core.config_store import ConfigStore
+from hydra.utils import instantiate
 from omegaconf import MISSING, OmegaConf
 
-from disaster_routing.solver.config import CDPSolverConfig, register_solver_configs
-from disaster_routing.solver.solver import CDPSolver
-
-from disaster_routing.random.config import register_random_configs
-
+from disaster_routing.eval.config import EvaluationConfig, register_evaluator_configs
+from disaster_routing.eval.evaluator import Evaluator
+from disaster_routing.ilp.cdp import ILPCDP
+from disaster_routing.instances.generate import (
+    InstanceGeneratorConfig,
+    load_or_gen_instance,
+)
 from disaster_routing.placement.config import (
     ContentPlacementConfig,
     register_placement_configs,
 )
 from disaster_routing.placement.strategy import ContentPlacementStrategy
-
-from disaster_routing.ilp.cdp import ILPCDP
-
-from disaster_routing.instances.generate import (
-    InstanceGeneratorConfig,
-    load_or_gen_instance,
-)
-from disaster_routing.eval.config import EvaluationConfig, register_evaluator_configs
-from disaster_routing.eval.evaluator import Evaluator
-from disaster_routing.utils.structlog import SL, color_enabled
+from disaster_routing.random.config import register_random_configs
 from disaster_routing.routing.routing_algo import InfeasibleRouteError
+from disaster_routing.solver.config import CDPSolverConfig, register_solver_configs
+from disaster_routing.solver.solver import CDPSolver
+from disaster_routing.utils.structlog import SL, color_enabled
 
 
 def int_dict_to_list(d: dict[int, int]):

@@ -1,5 +1,5 @@
-from disaster_routing.topologies.nsfnet import nsfnet
 from disaster_routing.topologies.cost239 import cost239
+from disaster_routing.topologies.nsfnet import nsfnet
 from disaster_routing.topologies.topology import Topology
 
 
