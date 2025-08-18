@@ -29,8 +29,6 @@ from .eval.config import EvaluationConfig, register_evaluator_configs
 from .eval.evaluator import Evaluator
 from .utils.structlog import SL, color_enabled
 from .routing.routing_algo import InfeasibleRouteError
-from .routing.config import register_routing_algo_configs
-from .conflicts.config import register_dsa_solver_configs
 
 
 def int_dict_to_list(d: dict[int, int]):
