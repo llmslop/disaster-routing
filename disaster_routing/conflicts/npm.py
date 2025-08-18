@@ -41,3 +41,7 @@ class NPMDSASolver(DSASolver):
         )
 
         return list(best_perm)
+
+    @override
+    def name(self) -> str:
+        return "npm"

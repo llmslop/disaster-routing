@@ -54,7 +54,7 @@ def pivot_results(input: IO[str], output: IO[bytes]):
             jq.compile(
                 """
                 .[] | {
-                  router:.config.router._short_,
+                  solver: first(.run_log[] | select(.msg=="Solver details") | .args.name),
                   instance: .config.instance.path,
                   mofi: first(.run_log[] | select(.msg=="Final solution") | .args.mofi),
                   total_fs: first(.run_log[] | select(.msg=="Final solution") | .args.total_fs),
@@ -71,7 +71,7 @@ def pivot_results(input: IO[str], output: IO[bytes]):
         df = df.pivot_table(
             values=["mofi", "total_fs", "score", "time"],
             index="instance",
-            columns="router",
+            columns="solver",
             margins_name="Avg.",
             margins=True,
         )

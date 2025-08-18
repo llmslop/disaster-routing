@@ -1,7 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 from math import ceil
-from typing import cast
+from typing import Any, cast
 
 from hydra.utils import instantiate
 from omegaconf import MISSING
@@ -69,6 +69,7 @@ class InstanceGenerator:
 
 @dataclass
 class InstanceGeneratorConfig:
+    defaults: list[Any] = field(default_factory=lambda: [{"random": "unseeded"}])
     random: RandomConfig = MISSING
     num_requests: int = 10
     topology_name: str = "nsfnet"

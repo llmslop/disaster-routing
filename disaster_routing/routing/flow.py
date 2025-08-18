@@ -146,6 +146,10 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
         pass
 
     @override
+    def name(self) -> str:
+        return "flow"
+
+    @override
     def route_request(self, req: Request, top: Topology, dst: set[int]) -> ilist[Route]:
         assert len(dst) >= 2
 

@@ -61,4 +61,4 @@ def register_dsa_solver_configs(group: str = "dsa_solver"):
     cs.store(group=group, name="fpga", node=FPGADSASolverConfig)
     cs.store(group=group, name="npm", node=NPMDSASolverConfig)
 
-    register_random_configs(group)
+    register_random_configs(f"{group}/random")

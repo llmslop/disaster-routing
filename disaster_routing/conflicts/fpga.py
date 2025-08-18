@@ -17,6 +17,10 @@ class FPGADSASolver(DSASolver):
         self.num_attempts = num_attempts
         self.random = random
 
+    @override
+    def name(self) -> str:
+        return "fpga"
+
     def solve_perm_with_first(
         self, conflict_graph: ConflictGraph, first: int
     ) -> list[int]:

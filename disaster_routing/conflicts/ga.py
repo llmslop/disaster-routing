@@ -40,3 +40,7 @@ class GADSASolver(DSASolver):
         )
 
         return list(best_perm)
+
+    @override
+    def name(self) -> str:
+        return "ga"
