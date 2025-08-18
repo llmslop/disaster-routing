@@ -3,8 +3,8 @@ from random import random
 from typing import cast
 import networkx as nx
 
-from .topology import DisasterZone, Topology, make_digraph
-from .graphs import Graph
+from disaster_routing.topologies.topology import DisasterZone, Topology, make_digraph
+from disaster_routing.topologies.graphs import Graph
 
 
 def dist(p1: tuple[float, float], p2: tuple[float, float]):

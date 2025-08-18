@@ -40,3 +40,8 @@ dev = [
 
 [tool.uv]
 default-groups = ["dev", "color-log"]
+
+[tool.ruff]
+lint.select = [
+    "TID"
+]

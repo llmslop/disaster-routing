@@ -6,9 +6,9 @@ import networkx as nx
 from scipy.sparse import dok_matrix
 
 
-from ..instances.request import Request
-from ..instances.instance import Instance
-from ..topologies.graphs import DiGraph
+from disaster_routing.instances.request import Request
+from disaster_routing.instances.instance import Instance
+from disaster_routing.topologies.graphs import DiGraph
 
 
 def solve_dc_placement_single_request(

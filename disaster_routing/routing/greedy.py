@@ -3,11 +3,11 @@ from typing import cast, override
 import networkx as nx
 import numpy as np
 
-from .routing_algo import InfeasibleRouteError, RoutingAlgorithm, Route
-from ..instances.modulation import ModulationFormat
-from ..instances.request import Request
-from ..topologies.topology import Topology
-from ..utils.ilist import ilist
+from disaster_routing.routing.routing_algo import InfeasibleRouteError, RoutingAlgorithm, Route
+from disaster_routing.instances.modulation import ModulationFormat
+from disaster_routing.instances.request import Request
+from disaster_routing.topologies.topology import Topology
+from disaster_routing.utils.ilist import ilist
 
 
 class GreedyRoutingAlgorithm(RoutingAlgorithm):

@@ -2,11 +2,11 @@ import logging
 from statistics import mean
 from typing import override
 
-from .naive import NaiveContentPlacement
+from disaster_routing.placement.naive import NaiveContentPlacement
 
-from ..utils.structlog import SL
-from ..utils.ilist import ilist
-from ..instances.instance import Instance
+from disaster_routing.utils.structlog import SL
+from disaster_routing.utils.ilist import ilist
+from disaster_routing.instances.instance import Instance
 
 import networkx as nx
 

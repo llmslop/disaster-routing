@@ -11,24 +11,24 @@ from omegaconf import MISSING, OmegaConf
 from disaster_routing.solver.config import CDPSolverConfig, register_solver_configs
 from disaster_routing.solver.solver import CDPSolver
 
-from .random.config import register_random_configs
+from disaster_routing.random.config import register_random_configs
 
-from .placement.config import (
+from disaster_routing.placement.config import (
     ContentPlacementConfig,
     register_placement_configs,
 )
-from .placement.strategy import ContentPlacementStrategy
+from disaster_routing.placement.strategy import ContentPlacementStrategy
 
-from .ilp.cdp import ILPCDP
+from disaster_routing.ilp.cdp import ILPCDP
 
-from .instances.generate import (
+from disaster_routing.instances.generate import (
     InstanceGeneratorConfig,
     load_or_gen_instance,
 )
-from .eval.config import EvaluationConfig, register_evaluator_configs
-from .eval.evaluator import Evaluator
-from .utils.structlog import SL, color_enabled
-from .routing.routing_algo import InfeasibleRouteError
+from disaster_routing.eval.config import EvaluationConfig, register_evaluator_configs
+from disaster_routing.eval.evaluator import Evaluator
+from disaster_routing.utils.structlog import SL, color_enabled
+from disaster_routing.routing.routing_algo import InfeasibleRouteError
 
 
 def int_dict_to_list(d: dict[int, int]):

@@ -2,8 +2,8 @@ from copy import deepcopy
 from typing import cast
 from networkx.readwrite.json_graph import node_link_data, node_link_graph
 
-from ..utils.ilist import ilist
-from .graphs import Graph, DiGraph
+from disaster_routing.utils.ilist import ilist
+from disaster_routing.topologies.graphs import Graph, DiGraph
 
 
 def make_digraph(graph: Graph) -> DiGraph:

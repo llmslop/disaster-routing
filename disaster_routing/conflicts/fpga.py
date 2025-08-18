@@ -1,8 +1,8 @@
 from typing import override
 
-from ..random.random import Random
-from .conflict_graph import ConflictGraph
-from .solver import DSASolver
+from disaster_routing.random.random import Random
+from disaster_routing.conflicts.conflict_graph import ConflictGraph
+from disaster_routing.conflicts.solver import DSASolver
 
 
 class FPGADSASolver(DSASolver):

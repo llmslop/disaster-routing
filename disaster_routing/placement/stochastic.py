@@ -1,9 +1,9 @@
 from typing import override
 
-from ..instances.instance import Instance
-from ..utils.ilist import ilist
-from ..random.random import Random
-from .naive import NaiveContentPlacement
+from disaster_routing.instances.instance import Instance
+from disaster_routing.utils.ilist import ilist
+from disaster_routing.random.random import Random
+from disaster_routing.placement.naive import NaiveContentPlacement
 
 
 class StochasticContentPlacement(NaiveContentPlacement):

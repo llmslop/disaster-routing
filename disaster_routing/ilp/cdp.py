@@ -2,12 +2,12 @@ import logging
 from math import ceil
 from typing import final
 
-from ..eval.evaluator import Evaluator
-from ..instances.instance import Instance
-from ..instances.modulation import ModulationFormat
-from ..routing.routing_algo import Route
-from ..utils.ilist import ilist
-from ..utils.structlog import SL
+from disaster_routing.eval.evaluator import Evaluator
+from disaster_routing.instances.instance import Instance
+from disaster_routing.instances.modulation import ModulationFormat
+from disaster_routing.routing.routing_algo import Route
+from disaster_routing.utils.ilist import ilist
+from disaster_routing.utils.structlog import SL
 
 from pulp import (
     PULP_CBC_CMD,

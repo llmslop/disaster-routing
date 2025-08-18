@@ -1,6 +1,6 @@
-from .nsfnet import nsfnet
-from .cost239 import cost239
-from .topology import Topology
+from disaster_routing.topologies.nsfnet import nsfnet
+from disaster_routing.topologies.cost239 import cost239
+from disaster_routing.topologies.topology import Topology
 
 
 def get_topology(name: str) -> Topology:

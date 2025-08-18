@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from .conflict_graph import ConflictGraph
+from disaster_routing.conflicts.conflict_graph import ConflictGraph
 
 
 class DSASolver(ABC):
