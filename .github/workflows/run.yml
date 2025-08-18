@@ -78,4 +78,3 @@ jobs:
           name: log
           path: multirun
           include-hidden-files: true
-
