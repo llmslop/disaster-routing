@@ -1,9 +1,10 @@
 #!/bin/env python3
 
-from typing import IO
-import pandas as pd
 import sys
+from typing import IO
+
 import jq
+import pandas as pd
 
 
 def is_float(cell: str | float) -> bool:
@@ -53,15 +54,16 @@ def pivot_results(input: IO[str], output: IO[bytes]):
         results = (
             jq.compile(
                 """
-                .[] | {
-                  router:.config.router._short_,
-                  instance: .config.instance.path,
-                  mofi: first(.run_log[] | select(.msg=="Final solution") | .args.mofi),
-                  total_fs: first(.run_log[] | select(.msg=="Final solution") | .args.total_fs),
-                  score: first(.run_log[] | select(.msg=="Final solution") | .args.score),
-                  time: last(.run_log[]).time_unix - first(.run_log[]).time_unix,
-                }
-                """
+            .[] | {
+              solver: first(.run_log[] | select(.msg=="Solver details") | .args.name),
+              instance: .config.instance.path,
+              mofi: first(.run_log[] | select(.msg=="Final solution") | .args.mofi),
+              total_fs: first(.run_log[] | select(.msg=="Final solution") 
+                                         | .args.total_fs),
+              score: first(.run_log[] | select(.msg=="Final solution") | .args.score),
+              time: last(.run_log[]).time_unix - first(.run_log[]).time_unix,
+            }
+            """
             )
             .input_text(input.read())
             .all()
@@ -71,7 +73,7 @@ def pivot_results(input: IO[str], output: IO[bytes]):
         df = df.pivot_table(
             values=["mofi", "total_fs", "score", "time"],
             index="instance",
-            columns="router",
+            columns="solver",
             margins_name="Avg.",
             margins=True,
         )

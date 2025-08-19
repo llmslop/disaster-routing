@@ -1,14 +1,19 @@
 import logging
 from math import ceil
 from typing import cast, override
+
 import networkx as nx
 import numpy as np
 
-from .routing_algo import InfeasibleRouteError, RoutingAlgorithm, Route
-from ..instances.request import Request
-from ..topologies.topology import Topology
-from ..topologies.graphs import Graph, StrDiGraph
-from ..utils.ilist import ilist
+from disaster_routing.instances.request import Request
+from disaster_routing.routing.routing_algo import (
+    InfeasibleRouteError,
+    Route,
+    RoutingAlgorithm,
+)
+from disaster_routing.topologies.graphs import Graph, StrDiGraph
+from disaster_routing.topologies.topology import Topology
+from disaster_routing.utils.ilist import ilist
 
 log = logging.getLogger(__name__)
 
@@ -144,6 +149,10 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
     def __init__(self, *_: object, **__: object) -> None:
         self.inv_alpha: float = 1e6
         pass
+
+    @override
+    def name(self) -> str:
+        return "flow"
 
     @override
     def route_request(self, req: Request, top: Topology, dst: set[int]) -> ilist[Route]:

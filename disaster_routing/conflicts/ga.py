@@ -1,9 +1,9 @@
 from typing import override
 
-from .solver import DSASolver
-from .conflict_graph import ConflictGraph
-from ..optimize.perm_ga import permutation_genetic_algorithm
-from ..random.random import Random
+from disaster_routing.conflicts.conflict_graph import ConflictGraph
+from disaster_routing.conflicts.solver import DSASolver
+from disaster_routing.optimize.perm_ga import permutation_genetic_algorithm
+from disaster_routing.random.random import Random
 
 
 class GADSASolver(DSASolver):
@@ -40,3 +40,7 @@ class GADSASolver(DSASolver):
         )
 
         return list(best_perm)
+
+    @override
+    def name(self) -> str:
+        return "ga"

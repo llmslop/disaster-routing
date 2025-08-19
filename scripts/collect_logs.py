@@ -1,13 +1,13 @@
 #!/bin/env python3
-from collections.abc import Iterable
-import sys
 import json
-from fs import open_fs
+import sys
+from collections.abc import Iterable
 from os import sep
-from fs.errors import ResourceNotFound
-from yaml import safe_load
 
 from extract_log import collect_log
+from fs import open_fs
+from fs.errors import ResourceNotFound
+from yaml import safe_load
 
 
 def collect_logs(paths: Iterable[str]):

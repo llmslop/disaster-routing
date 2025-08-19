@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 from hydra.core.config_store import ConfigStore
 
 
@@ -18,9 +19,7 @@ class UnseededRandomConfig(RandomConfig):
     _target_: str = "disaster_routing.random.unseeded.UnseededRandom"
 
 
-def register_random_configs(prefix: str | None = None):
-    group = "random" if prefix is None else f"{prefix}/random"
-
+def register_random_configs(group: str = "random"):
     cs = ConfigStore.instance()
     cs.store(group=group, name="seeded", node=SeededRandomConfig)
     cs.store(group=group, name="unseeded", node=UnseededRandomConfig)

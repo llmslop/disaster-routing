@@ -1,9 +1,10 @@
 from dataclasses import dataclass, field
 from typing import Any
+
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
 
-from ..random.config import RandomConfig, register_random_configs
+from disaster_routing.random.config import RandomConfig, register_random_configs
 
 
 @dataclass

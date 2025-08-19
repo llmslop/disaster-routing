@@ -3,7 +3,6 @@ from os import environ
 from typing import override
 from warnings import warn
 
-
 reset_all = ""
 bright = ""
 dim = ""
@@ -15,8 +14,8 @@ def colorize(json: str) -> str:
 
 
 try:
-    from colorama import just_fix_windows_console, Fore, Style
-    from pygments import highlight, lexers, formatters
+    from colorama import Fore, Style, just_fix_windows_console
+    from pygments import formatters, highlight, lexers
 
     color_enabled = environ.get("COLOR", "1") in ("1", "true", "yes", "on", "enable")
     if color_enabled:

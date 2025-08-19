@@ -1,8 +1,8 @@
 from typing import override
 
-from ..random.random import Random
-from .conflict_graph import ConflictGraph
-from .solver import DSASolver
+from disaster_routing.conflicts.conflict_graph import ConflictGraph
+from disaster_routing.conflicts.solver import DSASolver
+from disaster_routing.random.random import Random
 
 
 class FPGADSASolver(DSASolver):
@@ -16,6 +16,10 @@ class FPGADSASolver(DSASolver):
     ):
         self.num_attempts = num_attempts
         self.random = random
+
+    @override
+    def name(self) -> str:
+        return "fpga"
 
     def solve_perm_with_first(
         self, conflict_graph: ConflictGraph, first: int

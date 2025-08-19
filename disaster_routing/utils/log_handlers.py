@@ -1,5 +1,5 @@
-from logging import FileHandler, LogRecord, Formatter
 import re
+from logging import FileHandler, Formatter, LogRecord
 from typing import override
 from warnings import warn
 

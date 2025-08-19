@@ -1,24 +1,25 @@
-#!/bin/env python3
-from itertools import combinations
-import networkx as nx
-from functools import cache
 import logging
+from functools import cache
+from itertools import combinations
 from math import isnan
 from typing import Callable, override
 
-from ..conflicts.conflict_graph import ConflictGraph
-from ..conflicts.solver import DSASolver
-from ..eval.evaluator import Evaluator
-from ..instances.instance import Instance
-from ..instances.request import Request
-from ..topologies.topology import Topology
-from ..topologies.graphs import Graph
-from ..utils.success_stats import SuccessRateStats
-from ..utils.structlog import SL
-from ..utils.ilist import ilist
-from ..random.random import Random
-from .routing_algo import InfeasibleRouteError, Route, RoutingAlgorithm
-from .flow import FlowRoutingAlgorithm
+import networkx as nx
+
+from disaster_routing.conflicts.conflict_graph import ConflictGraph
+from disaster_routing.conflicts.solver import DSASolver
+from disaster_routing.eval.evaluator import Evaluator
+from disaster_routing.instances.instance import Instance
+from disaster_routing.instances.request import Request
+from disaster_routing.random.random import Random
+from disaster_routing.routing.flow import FlowRoutingAlgorithm
+from disaster_routing.routing.routing_algo import InfeasibleRouteError, Route
+from disaster_routing.solver.solution import CDPSolution
+from disaster_routing.solver.solver import CDPSolver
+from disaster_routing.topologies.graphs import Graph
+from disaster_routing.utils.ilist import ilist
+from disaster_routing.utils.structlog import SL
+from disaster_routing.utils.success_stats import SuccessRateStats
 
 log = logging.getLogger(__name__)
 
@@ -285,9 +286,9 @@ class Individual:
             return None
 
 
-class SGARoutingAlgorithm(RoutingAlgorithm):
-    evaluator: Evaluator
+class SGASolver(CDPSolver):
     random: Random
+    approximate_dsa_solver: DSASolver
     dsa_solver: DSASolver
     num_gens: int
     pop_size: int
@@ -300,8 +301,9 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
     def __init__(
         self,
         evaluator: Evaluator,
-        random: Random,
+        approximate_dsa_solver: DSASolver,
         dsa_solver: DSASolver,
+        random: Random,
         num_gens: int,
         pop_size: int,
         cr_rate: float,
@@ -311,8 +313,9 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
         elitism_rate: float,
         **kwargs: object,
     ):
-        self.evaluator = evaluator
+        super().__init__(evaluator)
         self.random = random
+        self.approximate_dsa_solver = approximate_dsa_solver
         self.dsa_solver = dsa_solver
         self.num_gens = num_gens
         self.pop_size = pop_size
@@ -342,7 +345,9 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
             inst.topology.graph,
             {dc for dcs in content_placement.values() for dc in dcs},
         )
-        fitness_evaluator = FitnessEvaluator(inst, self.evaluator, self.dsa_solver)
+        fitness_evaluator = FitnessEvaluator(
+            inst, self.evaluator, self.approximate_dsa_solver
+        )
         population: list[Individual] = [
             Individual.random(self.random, inst, dist_map, content_placement)
             for _ in range(self.pop_size - 1)
@@ -442,14 +447,18 @@ class SGARoutingAlgorithm(RoutingAlgorithm):
         return min(collection, key=lambda ind: ind.fitness(fitness_evaluator))
 
     @override
-    def route_instance(
+    def name(self) -> str:
+        return f"sga({self.approximate_dsa_solver.name()}, {self.dsa_solver.name()})"
+
+    @override
+    def solve(
         self, inst: Instance, content_placement: dict[int, set[int]]
-    ) -> ilist[ilist[Route]]:
+    ) -> CDPSolution:
         population, fitness_evaluator = self.evolve(
             inst, content_placement, self.num_gens
         )
-        return self.best(population, fitness_evaluator).all_routes
 
-    @override
-    def route_request(self, req: Request, top: Topology, dst: set[int]) -> ilist[Route]:
-        raise NotImplementedError()
+        best = self.best(population, fitness_evaluator).all_routes
+        conflict_graph = ConflictGraph(inst, best)
+        start_indices, _ = self.dsa_solver.solve(conflict_graph)
+        return CDPSolution(best, start_indices, conflict_graph.num_fses)

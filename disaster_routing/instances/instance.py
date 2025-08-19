@@ -1,9 +1,9 @@
 from copy import deepcopy
 from typing import cast
 
-from ..utils.ilist import ilist
-from ..topologies.topology import Topology
-from .request import Request
+from disaster_routing.instances.request import Request
+from disaster_routing.topologies.topology import Topology
+from disaster_routing.utils.ilist import ilist
 
 
 class Instance:

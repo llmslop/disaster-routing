@@ -3,11 +3,11 @@ from collections.abc import Iterable
 from statistics import mean
 from typing import override
 
-from ..instances.instance import Instance
-from ..instances.modulation import ModulationFormat
-from ..instances.request import Request
-from ..topologies.topology import Topology
-from ..utils.ilist import ilist
+from disaster_routing.instances.instance import Instance
+from disaster_routing.instances.modulation import ModulationFormat
+from disaster_routing.instances.request import Request
+from disaster_routing.topologies.topology import Topology
+from disaster_routing.utils.ilist import ilist
 
 
 class InfeasibleRouteError(Exception):
@@ -71,7 +71,11 @@ class RoutingAlgorithm(ABC):
         self, req: Request, top: Topology, dst: set[int]
     ) -> ilist[Route]: ...
 
-    def check_solution(self, req: Request, dst: Iterable[int], routes: ilist[Route]):
+    @abstractmethod
+    def name(self) -> str: ...
+
+    @staticmethod
+    def check_solution(req: Request, dst: Iterable[int], routes: ilist[Route]):
         tops = set(route.top for route in routes)
         assert len(tops) == 1
 
@@ -90,7 +94,8 @@ class RoutingAlgorithm(ABC):
                 dz1, dz2 = dzs[i], dzs[j]
                 assert dz1.intersection(dz2).issubset(source_dz)
 
-    def num_avg_hops(self, routes: list[Route]) -> float:
+    @staticmethod
+    def num_avg_hops(routes: list[Route]) -> float:
         return mean(len(route.node_list) - 1 for route in routes)
 
     def route_instance(
@@ -101,7 +106,8 @@ class RoutingAlgorithm(ABC):
             for req in inst.requests
         )
 
-    def sort_routes(self, all_routes: ilist[ilist[Route]]) -> ilist[ilist[Route]]:
+    @staticmethod
+    def sort_routes(all_routes: ilist[ilist[Route]]) -> ilist[ilist[Route]]:
         sorted_routes: ilist[ilist[Route]] = ()
         for routes in all_routes:
             sorted_routes += (ilist[Route](sorted(routes, key=lambda r: r.node_list)),)

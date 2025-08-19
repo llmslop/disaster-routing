@@ -1,6 +1,8 @@
 import random
+
 import numpy as np
-from .random import Random
+
+from disaster_routing.random.random import Random
 
 
 class UnseededRandom(Random):

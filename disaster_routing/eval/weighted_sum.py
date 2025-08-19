@@ -1,7 +1,7 @@
 from math import isnan
 from typing import override
 
-from .evaluator import Evaluator
+from disaster_routing.eval.evaluator import Evaluator
 
 
 class WeightedSumEvaluator(Evaluator):

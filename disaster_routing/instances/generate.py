@@ -1,18 +1,18 @@
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass, field
 from math import ceil
-from typing import cast
+from typing import Any, cast
 
 from hydra.utils import instantiate
 from omegaconf import MISSING
 
-from .instance import Instance
-from ..instances.request import Request
-from ..topologies.topology import Topology
-from ..topologies.topologies import get_topology
-from ..random.random import Random
-from ..random.config import RandomConfig
-from ..utils.ilist import ilist
+from disaster_routing.instances.instance import Instance
+from disaster_routing.instances.request import Request
+from disaster_routing.random.config import RandomConfig
+from disaster_routing.random.random import Random
+from disaster_routing.topologies.topologies import get_topology
+from disaster_routing.topologies.topology import Topology
+from disaster_routing.utils.ilist import ilist
 
 
 class InstanceGenerator:
@@ -69,6 +69,7 @@ class InstanceGenerator:
 
 @dataclass
 class InstanceGeneratorConfig:
+    defaults: list[Any] = field(default_factory=lambda: [{"random": "unseeded"}])
     random: RandomConfig = MISSING
     num_requests: int = 10
     topology_name: str = "nsfnet"

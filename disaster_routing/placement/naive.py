@@ -1,10 +1,10 @@
 import logging
 from typing import override
 
-from ..utils.structlog import SL
-from ..utils.ilist import ilist
-from ..instances.instance import Instance
-from .strategy import ContentPlacementStrategy
+from disaster_routing.instances.instance import Instance
+from disaster_routing.placement.strategy import ContentPlacementStrategy
+from disaster_routing.utils.ilist import ilist
+from disaster_routing.utils.structlog import SL
 
 log = logging.getLogger(__name__)
 

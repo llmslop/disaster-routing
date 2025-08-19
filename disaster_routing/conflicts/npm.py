@@ -1,10 +1,10 @@
 from typing import override
 
-from .solver import DSASolver
-from .conflict_graph import ConflictGraph
-from ..optimize.perm_npm import permutation_npm
-from ..conflicts.fpga import FPGADSASolver
-from ..random.random import Random
+from disaster_routing.conflicts.conflict_graph import ConflictGraph
+from disaster_routing.conflicts.fpga import FPGADSASolver
+from disaster_routing.conflicts.solver import DSASolver
+from disaster_routing.optimize.perm_npm import permutation_npm
+from disaster_routing.random.random import Random
 
 
 class NPMDSASolver(DSASolver):
@@ -41,3 +41,7 @@ class NPMDSASolver(DSASolver):
         )
 
         return list(best_perm)
+
+    @override
+    def name(self) -> str:
+        return "npm"
