@@ -90,10 +90,6 @@ def my_main(cfg: MainConfig):
         instantiate(cfg.eval, instance=instance, content_placement=content_placement),
     )
 
-    ilp: ILPCDP | None = None
-    if cfg.ilp_check:
-        ilp = ILPCDP(instance, evaluator)
-
     if cfg.solver is not None:
         solver = cast(CDPSolver, instantiate(cfg.solver, evaluator=evaluator))
         log.info(SL("Solver details", name=solver.name()))
@@ -134,7 +130,7 @@ def my_main(cfg: MainConfig):
             if cfg.safety_checks:
                 CDPSolver.check(instance, content_placement, sol)
             if cfg.ilp_check:
-                assert ilp is not None
+                ilp = ILPCDP(instance, evaluator)
                 ilp.check_solution(sol.all_routes, sol.start_indices, content_placement)
         except InfeasibleRouteError:
             log.info(
