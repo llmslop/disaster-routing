@@ -60,7 +60,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4  # ← necessary to get your scripts
+        uses: actions/checkout@v4
 
       - name: Download all artifacts to multirun/
         uses: actions/download-artifact@v4
