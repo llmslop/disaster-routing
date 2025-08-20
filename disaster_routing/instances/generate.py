@@ -100,4 +100,5 @@ def load_or_gen_instance(config: InstanceGeneratorConfig) -> Instance:
         with open(config.path, "w") as f:
             obj = instance.to_json()
             json.dump(obj, f)
+            _ = f.write("\n")
         return instance
