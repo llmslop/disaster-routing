@@ -36,10 +36,9 @@ class MainConfig:
     defaults: list[Any] = field(
         default_factory=lambda: [
             "_self_",
-            # {"approximate_dsa_solver": "ga"},
-            # {"dsa_solver": "ga"},
             {"eval": "relative"},
             {"content_placement": "greedy"},
+            {"instance.random": "unseeded"},
         ]
     )
     solver: CDPSolverConfig | None = None
@@ -48,7 +47,6 @@ class MainConfig:
     content_placement: ContentPlacementConfig = MISSING
     safety_checks: bool = True
     ilp_check: bool | None = None
-    ilp_solve: bool = False
 
 
 OmegaConf.register_new_resolver(
@@ -60,7 +58,7 @@ cs = ConfigStore.instance()
 cs.store(name="config", node=MainConfig)
 register_evaluator_configs()
 register_placement_configs()
-register_random_configs("instance")
+register_random_configs("instance.random")
 register_solver_configs()
 
 log = logging.getLogger(__name__)
@@ -92,13 +90,6 @@ def my_main(cfg: MainConfig):
         instantiate(cfg.eval, instance=instance, content_placement=content_placement),
     )
 
-    ilp: ILPCDP | None = None
-    if cfg.ilp_solve or cfg.ilp_check:
-        ilp = ILPCDP(instance, evaluator)
-    if cfg.ilp_solve:
-        assert ilp is not None
-        _ = ilp.solve()
-
     if cfg.solver is not None:
         solver = cast(CDPSolver, instantiate(cfg.solver, evaluator=evaluator))
         log.info(SL("Solver details", name=solver.name()))
@@ -106,8 +97,8 @@ def my_main(cfg: MainConfig):
         start = time.time()
         try:
             sol = solver.solve(instance, content_placement)
-            if cfg.safety_checks:
-                CDPSolver.check(instance, content_placement, sol)
+            if sol.content_placement_override:
+                log.debug(SL("Content placement override", placement=content_placement))
             log.debug(
                 SL(
                     "Routing results",
@@ -136,9 +127,17 @@ def my_main(cfg: MainConfig):
                     score=evaluator.evaluate_solution(sol),
                 )
             )
+            if cfg.safety_checks:
+                CDPSolver.check(instance, content_placement, sol)
             if cfg.ilp_check:
-                assert ilp is not None
-                ilp.check_solution(sol.all_routes, sol.start_indices, content_placement)
+                ilp = ILPCDP(instance, evaluator)
+                ilp.check_solution(
+                    sol.all_routes,
+                    sol.start_indices,
+                    content_placement,
+                    sol.total_fs(),
+                    sol.mofi(),
+                )
         except InfeasibleRouteError:
             log.info(
                 SL(

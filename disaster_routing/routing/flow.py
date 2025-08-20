@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Iterable
 from math import ceil
 from typing import cast, override
 
@@ -101,7 +102,7 @@ def extract_all_flow_paths(
 def reconstruct_min_hop_path(
     G: Graph,
     source: int,
-    avail_outs: list[int],
+    avail_outs: Iterable[int],
     group_path: list[set[int]],
     free_nodes: set[int],
 ) -> ilist[int]:

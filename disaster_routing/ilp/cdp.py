@@ -1,6 +1,6 @@
 import logging
 from math import ceil
-from typing import final
+from typing import cast, final
 
 from pulp import (
     PULP_CBC_CMD,
@@ -10,6 +10,7 @@ from pulp import (
     LpInteger,
     LpMinimize,
     LpProblem,
+    LpStatus,
     LpVariable,
     lpSum,
 )
@@ -22,6 +23,22 @@ from disaster_routing.utils.ilist import ilist
 from disaster_routing.utils.structlog import SL
 
 log = logging.getLogger(__name__)
+
+
+class ILPCDPSolution:
+    status: int
+    var_values: dict[str, float]
+    objective: float | None
+
+    def __init__(
+        self, status: int, var_values: dict[str, float], objective: float | None
+    ) -> None:
+        self.status = status
+        self.var_values = var_values
+        self.objective = objective
+
+    def status_str(self):
+        return LpStatus[self.status]
 
 
 @final
@@ -544,39 +561,21 @@ class ILPCDP:
                             + f"(30:{r_idx}:{r_idx_prime}:{k}:{k_prime})",
                         )
 
-    def solve(self) -> tuple[float, float]:
+    def solve(self, msg: bool, time_limit: int | None) -> ILPCDPSolution:
         assert self.problem.objective is not None
-        self.problem.solve(PULP_CBC_CMD(msg=True))
-        log.debug(SL("ILP objective", value=self.problem.objective.value()))
-        log.debug(SL("MOFI", value=self.Delta.value()))
-        log.debug(SL("Total FS", value=self.total_fs.value()))
+        status = self.problem.solve(PULP_CBC_CMD(msg=msg, timeLimit=time_limit))
+        objective = self.problem.objective.value()
+        log.debug(SL("ILP solve status", status=status, objective=objective))
 
-        for r_idx, r in enumerate(self.inst.requests):
-            for k in range(self.max_paths[r_idx]):
-                arcs = [
-                    a[:2]
-                    for a_idx, a in enumerate(self.arcs)
-                    if self.p_k_ra[(k, r_idx, a_idx)]
-                ]
-                log.debug(
-                    SL(
-                        "ILP solution",
-                        request=r.to_json(),
-                        path=k,
-                        w=self.w_k_r[(k, r_idx)].value(),
-                        g=self.g_k_r[(k, r_idx)].value(),
-                        arcs=arcs,
-                        Phi=self.Phi_k_r[(k, r_idx)].value(),
-                    )
-                )
-
-        return 0, 0
+        var_values = self.problem.variablesDict()
+        return ILPCDPSolution(status, var_values, objective)
 
     def check_solution(
         self,
         all_routes: ilist[ilist[Route]],
         start_indices: dict[int, int],
         content_placement: dict[int, set[int]],
+        total_fs: int | None = None,
         mofi: int | None = None,
     ) -> None:
         values: dict[str, int] = {}
@@ -837,11 +836,21 @@ class ILPCDP:
             for a, b in zip(sis, num_fs)
         )
 
-        assert mofi is None or mofi == calc_mofi
-
         set_value(self.Delta, calc_mofi)
 
-        def calc_expr(expr: LpConstraint) -> tuple[float, dict[str, dict[str, float]]]:
+        def calc_expr(expr: LpAffineExpression | LpVariable) -> float:
+            if isinstance(expr, LpVariable):
+                return get_value(expr)
+            else:
+                return cast(
+                    float,
+                    sum(get_value(v) * coeff for v, coeff in expr.items())
+                    + expr.constant,
+                )
+
+        def calc_constraint(
+            expr: LpConstraint,
+        ) -> tuple[float, dict[str, dict[str, float]]]:
             sum = expr.constant
             var_values: dict[str, dict[str, float]] = {
                 "CONST": {
@@ -857,6 +866,9 @@ class ILPCDP:
                 }
                 sum += value * x
             return sum, var_values
+
+        assert mofi is None or abs(calc_expr(self.Delta) - mofi) < 1e-4
+        assert total_fs is None or abs(calc_expr(self.total_fs) - total_fs) < 1e-4
 
         # verify bounds
         num_true = 0
@@ -921,7 +933,7 @@ class ILPCDP:
         num_incomplete = 0
         for name, constraint in self.problem.constraints.items():
             try:
-                expr_value, var_values = calc_expr(constraint)
+                expr_value, var_values = calc_constraint(constraint)
                 if abs(expr_value) < 1e-4:
                     cmp_result = 0
                 else:
