@@ -10,6 +10,7 @@ from pulp import (
     LpInteger,
     LpMinimize,
     LpProblem,
+    LpStatus,
     LpVariable,
     lpSum,
 )
@@ -22,6 +23,22 @@ from disaster_routing.utils.ilist import ilist
 from disaster_routing.utils.structlog import SL
 
 log = logging.getLogger(__name__)
+
+
+class ILPCDPSolution:
+    status: int
+    var_values: dict[str, float]
+    objective: float | None
+
+    def __init__(
+        self, status: int, var_values: dict[str, float], objective: float | None
+    ) -> None:
+        self.status = status
+        self.var_values = var_values
+        self.objective = objective
+
+    def status_str(self):
+        return LpStatus[self.status]
 
 
 @final
@@ -544,33 +561,14 @@ class ILPCDP:
                             + f"(30:{r_idx}:{r_idx_prime}:{k}:{k_prime})",
                         )
 
-    def solve(self) -> tuple[float, float]:
+    def solve(self, msg: bool, time_limit: int | None) -> ILPCDPSolution:
         assert self.problem.objective is not None
-        self.problem.solve(PULP_CBC_CMD(msg=True))
-        log.debug(SL("ILP objective", value=self.problem.objective.value()))
-        log.debug(SL("MOFI", value=self.Delta.value()))
-        log.debug(SL("Total FS", value=self.total_fs.value()))
+        status = self.problem.solve(PULP_CBC_CMD(msg=msg, timeLimit=time_limit))
+        objective = self.problem.objective.value()
+        log.debug(SL("ILP solve status", status=status, objective=objective))
 
-        for r_idx, r in enumerate(self.inst.requests):
-            for k in range(self.max_paths[r_idx]):
-                arcs = [
-                    a[:2]
-                    for a_idx, a in enumerate(self.arcs)
-                    if self.p_k_ra[(k, r_idx, a_idx)]
-                ]
-                log.debug(
-                    SL(
-                        "ILP solution",
-                        request=r.to_json(),
-                        path=k,
-                        w=self.w_k_r[(k, r_idx)].value(),
-                        g=self.g_k_r[(k, r_idx)].value(),
-                        arcs=arcs,
-                        Phi=self.Phi_k_r[(k, r_idx)].value(),
-                    )
-                )
-
-        return 0, 0
+        var_values = self.problem.variablesDict()
+        return ILPCDPSolution(status, var_values, objective)
 
     def check_solution(
         self,

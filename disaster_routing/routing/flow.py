@@ -253,6 +253,7 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                             for dz in top.dzs
                         ):
                             free_nodes.remove(node)
+                    Route.calc_num_fs()
                     routes.append(Route(top, path))
                 if len(routes) >= 2:
                     cost = self.route_set_cost(routes, req.bpsk_fs_count)

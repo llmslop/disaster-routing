@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from collections.abc import Iterable
 from statistics import mean
 from typing import override
@@ -65,6 +66,17 @@ class Route:
         return self.node_list == value.node_list if isinstance(value, Route) else False
 
 
+class RouteInfo:
+    route: Route
+    num_fs: int
+    start_idx: int
+
+    def __init__(self, route: Route, num_fs: int, start_idx: int):
+        self.route = route
+        self.num_fs = num_fs
+        self.start_idx = start_idx
+
+
 class RoutingAlgorithm(ABC):
     @abstractmethod
     def route_request(
@@ -107,8 +119,34 @@ class RoutingAlgorithm(ABC):
         )
 
     @staticmethod
-    def sort_routes(all_routes: ilist[ilist[Route]]) -> ilist[ilist[Route]]:
-        sorted_routes: ilist[ilist[Route]] = ()
+    def sort_routes(
+        all_routes: ilist[ilist[Route]],
+        num_fses: dict[int, int] | None = None,
+        start_indices: dict[int, int] | None = None,
+    ) -> ilist[ilist[Route]]:
+        if start_indices is None:
+            start_indices = defaultdict(int)
+        if num_fses is None:
+            num_fses = defaultdict(int)
+        all_route_infos: list[list[RouteInfo]] = []
+        idx = 0
         for routes in all_routes:
-            sorted_routes += (ilist[Route](sorted(routes, key=lambda r: r.node_list)),)
+            route_infos: list[RouteInfo] = []
+            for route in routes:
+                route_infos.append(RouteInfo(route, num_fses[idx], start_indices[idx]))
+                idx += 1
+            route_infos.sort(key=lambda r: r.route.node_list)
+            all_route_infos.append(route_infos)
+
+        start_indices.clear()
+        num_fses.clear()
+        sorted_routes: ilist[ilist[Route]] = ()
+        idx = 0
+        for route_infos in all_route_infos:
+            routes = tuple(ri.route for ri in route_infos)
+            for ri in route_infos:
+                start_indices[idx] = ri.start_idx
+                num_fses[idx] = ri.num_fs
+                idx += 1
+            sorted_routes += (routes,)
         return sorted_routes
