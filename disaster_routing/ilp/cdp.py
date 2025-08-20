@@ -1,6 +1,6 @@
 import logging
 from math import ceil
-from typing import final
+from typing import cast, final
 
 from pulp import (
     PULP_CBC_CMD,
@@ -575,6 +575,7 @@ class ILPCDP:
         all_routes: ilist[ilist[Route]],
         start_indices: dict[int, int],
         content_placement: dict[int, set[int]],
+        total_fs: int | None = None,
         mofi: int | None = None,
     ) -> None:
         values: dict[str, int] = {}
@@ -835,11 +836,21 @@ class ILPCDP:
             for a, b in zip(sis, num_fs)
         )
 
-        assert mofi is None or mofi == calc_mofi
-
         set_value(self.Delta, calc_mofi)
 
-        def calc_expr(expr: LpConstraint) -> tuple[float, dict[str, dict[str, float]]]:
+        def calc_expr(expr: LpAffineExpression | LpVariable) -> float:
+            if isinstance(expr, LpVariable):
+                return get_value(expr)
+            else:
+                return cast(
+                    float,
+                    sum(get_value(v) * coeff for v, coeff in expr.items())
+                    + expr.constant,
+                )
+
+        def calc_constraint(
+            expr: LpConstraint,
+        ) -> tuple[float, dict[str, dict[str, float]]]:
             sum = expr.constant
             var_values: dict[str, dict[str, float]] = {
                 "CONST": {
@@ -855,6 +866,9 @@ class ILPCDP:
                 }
                 sum += value * x
             return sum, var_values
+
+        assert mofi is None or abs(calc_expr(self.Delta) - mofi) < 1e-4
+        assert total_fs is None or abs(calc_expr(self.total_fs) - total_fs) < 1e-4
 
         # verify bounds
         num_true = 0
@@ -919,7 +933,7 @@ class ILPCDP:
         num_incomplete = 0
         for name, constraint in self.problem.constraints.items():
             try:
-                expr_value, var_values = calc_expr(constraint)
+                expr_value, var_values = calc_constraint(constraint)
                 if abs(expr_value) < 1e-4:
                     cmp_result = 0
                 else:

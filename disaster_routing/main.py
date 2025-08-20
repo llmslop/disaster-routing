@@ -131,7 +131,13 @@ def my_main(cfg: MainConfig):
                 CDPSolver.check(instance, content_placement, sol)
             if cfg.ilp_check:
                 ilp = ILPCDP(instance, evaluator)
-                ilp.check_solution(sol.all_routes, sol.start_indices, content_placement)
+                ilp.check_solution(
+                    sol.all_routes,
+                    sol.start_indices,
+                    content_placement,
+                    sol.total_fs(),
+                    sol.mofi(),
+                )
         except InfeasibleRouteError:
             log.info(
                 SL(
