@@ -9,6 +9,7 @@ dependencies = [
     "hydra-joblib-launcher>=1.2.0",
     "lxml>=6.0.0",
     "matplotlib>=3.10.3",
+    "maturin>=1.9.3",
     "networkx>=3.5",
     "numpy>=2.3.0",
     "openpyxl>=3.1.5",
