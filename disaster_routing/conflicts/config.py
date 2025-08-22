@@ -54,6 +54,7 @@ class FPGADSASolverConfig(DSASolverConfig):
     _target_: str = "disaster_routing.conflicts.npm.FPGADSASolver"
     num_attempts: int = 5
     random: RandomConfig = MISSING
+    rust_backend: bool = True
 
 
 def register_dsa_solver_configs(group: str = "dsa_solver"):
