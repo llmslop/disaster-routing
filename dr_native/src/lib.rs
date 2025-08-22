@@ -2,7 +2,6 @@ use pyo3::prelude::*;
 
 pub struct BitSet {
     bits: Vec<u64>,
-    len: usize, // universe size in bits
 }
 
 impl BitSet {
@@ -10,7 +9,6 @@ impl BitSet {
         let words = len.div_ceil(64);
         Self {
             bits: vec![u64::MAX; words],
-            len,
         }
     }
 
