@@ -1,9 +1,17 @@
+import logging
 from typing import Callable, cast, override
 
 from disaster_routing.conflicts.conflict_graph import ConflictGraph
 from disaster_routing.conflicts.solver import DSASolver
 from disaster_routing.random.random import Random
-from dr_native import fpga_solve_for_odsa_perm
+from disaster_routing.utils.structlog import SL
+
+try:
+    from dr_native import fpga_solve_for_odsa_perm
+except ImportError:
+    fpga_solve_for_odsa_perm = None
+
+log = logging.getLogger(__name__)
 
 
 class FPGADSASolver(DSASolver):
@@ -19,6 +27,9 @@ class FPGADSASolver(DSASolver):
     ):
         self.num_attempts = num_attempts
         self.random = random
+        if fpga_solve_for_odsa_perm is not None and rust_backend:
+            log.warn(SL("Rust FPGA backend is available, using Python implementation."))
+            rust_backend = False
         self.rust_backend = rust_backend
 
     @override
@@ -108,6 +119,7 @@ class FPGADSASolver(DSASolver):
         ]
 
         # print("Python", self.solve_perm_with_first(conflict_graph, start_indices[0]))
+        assert fpga_solve_for_odsa_perm is not None
         perm = cast(
             list[int],
             fpga_solve_for_odsa_perm(
