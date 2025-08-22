@@ -36,7 +36,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install dr_native
-        run: cd dr_native && uv tool run maturin develop --release
+        run: uv venv && cd dr_native && uv tool run maturin develop --release
 
       - name: Solve via two-phase algorithms
         run: scripts/run_all.sh --pattern=${{ matrix.pattern }} +solver=two_phase +solver.router=greedy,flow +solver.dsa_solver=ga,npm
