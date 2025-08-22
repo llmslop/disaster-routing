@@ -7,7 +7,9 @@ from disaster_routing.random.random import Random
 from disaster_routing.utils.structlog import SL
 
 try:
-    from dr_native import fpga_solve_for_odsa_perm
+    from dr_native import (
+        fpga_solve_for_odsa_perm,  # pyright: ignore[reportAttributeAccessIssue]
+    )
 except ImportError:
     fpga_solve_for_odsa_perm = None
 
@@ -27,8 +29,10 @@ class FPGADSASolver(DSASolver):
     ):
         self.num_attempts = num_attempts
         self.random = random
-        if fpga_solve_for_odsa_perm is not None and rust_backend:
-            log.warn(SL("Rust FPGA backend is available, using Python implementation."))
+        if fpga_solve_for_odsa_perm is None and rust_backend:
+            log.warn(
+                SL("Rust FPGA backend is not available, using Python implementation.")
+            )
             rust_backend = False
         self.rust_backend = rust_backend
 
