@@ -12,7 +12,6 @@ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 name = "dr_native"
 version = "0.1.0"
 dependencies = [
- "indexed_priority_queue",
  "pyo3",
 ]
 
@@ -21,12 +20,6 @@ name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
-
-[[package]]
-name = "indexed_priority_queue"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1523e738b9554395f973adce5c3f9bbb71357c90a3f91e8e37fce9e640726a27"
 
 [[package]]
 name = "indoc"
