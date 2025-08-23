@@ -1,7 +1,5 @@
+use indexed_priority_queue::ArrayMapIPQ;
 use pyo3::prelude::*;
-
-use std::cmp::Reverse;
-use std::collections::BinaryHeap;
 
 pub struct BitSet {
     bits: Vec<u64>,
@@ -51,46 +49,35 @@ fn fpga_solve_perm_with_first(
     let mut end_indices = vec![0; num_nodes as usize];
     end_indices[start_index as usize] = num_fses[start_index as usize];
 
-    let mut cached_max = vec![0; num_nodes as usize];
-
-    for nbr in adj_list[start_index as usize].iter() {
-        cached_max[*nbr as usize] = end_indices[start_index as usize];
-    }
-
-    // initial cached_max = max over already placed neighbors (only start_index so far)
-    let mut heap = BinaryHeap::new();
+    let mut heap = ArrayMapIPQ::<i32>::with_capacity(
+        vec![0; num_nodes as usize].into_boxed_slice(),
+        vec![usize::MAX; num_nodes as usize].into_boxed_slice(),
+        num_nodes as _,
+    );
     for node in 0..num_nodes {
         if node != start_index {
-            heap.push(Reverse((cached_max[node as usize], node)));
+            heap.push(node as _, 0);
         }
+    }
+    for nbr in adj_list[start_index as usize].iter() {
+        heap.push(*nbr as _, end_indices[start_index as usize]);
     }
 
     let mut mofi = end_indices[start_index as usize];
 
-    while ordering.len() < num_nodes as usize {
-        // pop until valid
-        let (next_index, next_node);
-        loop {
-            let Reverse((idx, node)) = heap.pop().unwrap();
-            if remaining.contains(node as _) && cached_max[node as usize] == idx {
-                next_index = idx;
-                next_node = node;
-                break;
-            }
-        }
-
-        let end_index = next_index + num_fses[next_node as usize];
-        end_indices[next_node as usize] = end_index;
+    while let Some((next_index, next_node)) = heap.min_priority().cloned().zip(heap.pop()) {
+        let end_index = next_index + num_fses[next_node];
+        end_indices[next_node] = end_index;
         mofi = mofi.max(end_index);
 
         remaining.remove(next_node as _);
-        ordering.push(next_node);
+        ordering.push(next_node as _);
 
         // update neighbors
-        for &nbr in &adj_list[next_node as usize] {
-            if remaining.contains(nbr as _) && end_index > cached_max[nbr as usize] {
-                cached_max[nbr as usize] = end_index;
-                heap.push(Reverse((end_index, nbr)));
+        for &nbr in &adj_list[next_node] {
+            if remaining.contains(nbr as _) {
+                let mut p = heap.update_up(nbr as usize);
+                *p = p.max(end_index);
             }
         }
     }

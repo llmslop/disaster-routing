@@ -9,4 +9,5 @@ name = "dr_native"
 crate-type = ["cdylib"]
 
 [dependencies]
+indexed_priority_queue = "0.3.0"
 pyo3 = "0.25.0"
