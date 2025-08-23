@@ -1,5 +1,8 @@
 use pyo3::prelude::*;
 
+use std::cmp::Reverse;
+use std::collections::BinaryHeap;
+
 pub struct BitSet {
     bits: Vec<u64>,
 }
@@ -45,33 +48,51 @@ fn fpga_solve_perm_with_first(
     let mut remaining = BitSet::new(num_nodes as _);
     remaining.remove(start_index as _);
 
-    let mut start_indices = vec![0; num_nodes as usize];
-    start_indices[start_index as usize] = 0;
+    let mut end_indices = vec![0; num_nodes as usize];
+    end_indices[start_index as usize] = num_fses[start_index as usize];
 
-    let mut mofi = 0;
+    let mut cached_max = vec![0; num_nodes as usize];
+
+    for nbr in adj_list[start_index as usize].iter() {
+        cached_max[*nbr as usize] = end_indices[start_index as usize];
+    }
+
+    // initial cached_max = max over already placed neighbors (only start_index so far)
+    let mut heap = BinaryHeap::new();
+    for node in 0..num_nodes {
+        if node != start_index {
+            heap.push(Reverse((cached_max[node as usize], node)));
+        }
+    }
+
+    let mut mofi = end_indices[start_index as usize];
 
     while ordering.len() < num_nodes as usize {
-        let mut next_node = i32::MAX;
-        let mut next_index = i32::MAX;
-        for node in (0..num_nodes).filter(|node| remaining.contains(*node as _)) {
-            let index = adj_list[node as usize]
-                .iter()
-                .cloned()
-                .filter(|i| !remaining.contains(*i as usize))
-                .map(|prev| start_indices[prev as usize] + num_fses[prev as usize])
-                .max()
-                .unwrap_or_default();
-            if index < next_index {
-                next_node = node as _;
-                next_index = index;
+        // pop until valid
+        let (next_index, next_node);
+        loop {
+            let Reverse((idx, node)) = heap.pop().unwrap();
+            if remaining.contains(node as _) && cached_max[node as usize] == idx {
+                next_index = idx;
+                next_node = node;
+                break;
             }
         }
 
-        start_indices[next_node as usize] = next_index;
-        mofi = mofi.max(next_index + num_fses[next_node as usize]);
+        let end_index = next_index + num_fses[next_node as usize];
+        end_indices[next_node as usize] = end_index;
+        mofi = mofi.max(end_index);
 
         remaining.remove(next_node as _);
         ordering.push(next_node);
+
+        // update neighbors
+        for &nbr in &adj_list[next_node as usize] {
+            if remaining.contains(nbr as _) && end_index > cached_max[nbr as usize] {
+                cached_max[nbr as usize] = end_index;
+                heap.push(Reverse((end_index, nbr)));
+            }
+        }
     }
 
     (ordering, mofi)
