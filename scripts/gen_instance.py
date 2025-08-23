@@ -9,7 +9,15 @@ topologies = {
     "nsfnet": [2, 5, 6, 9, 11],
     "cost239": [1, 2, 7, 8, 11],
 }
-instance_sets = [(10, 10), (20, 10), (50, 10), (100, 20)]
+instance_sets = [
+    (10, 10),
+    (20, 10),
+    (50, 10),
+    (100, 20),
+    (200, 5),
+    (300, 5),
+    (400, 5),
+]
 
 # clear directory dir
 if "-f" in sys.argv[1:] or "--force" in sys.argv[1:]:
