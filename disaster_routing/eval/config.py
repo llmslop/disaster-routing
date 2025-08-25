@@ -31,7 +31,7 @@ class RelativeEvaluationConfig(EvaluationConfig):
     defaults: list[Any] = field(
         default_factory=lambda: [
             "_self_",
-            {"approximate_dsa_solver": "ga"},
+            {"approximate_dsa_solver": "fpga"},
             {"router": "greedy"},
         ]
     )
