@@ -148,7 +148,7 @@ def reconstruct_min_hop_path(
 
 class FlowRoutingAlgorithm(RoutingAlgorithm):
     def __init__(self, *_: object, **__: object) -> None:
-        self.inv_alpha: float = 1000
+        self.inv_alpha: float = 0
         pass
 
     @override
