@@ -39,7 +39,7 @@ class GreedyRoutingAlgorithm(RoutingAlgorithm):
                 nx.single_source_dijkstra(
                     graph,
                     req.source,
-                    weight=None,
+                    # weight=None,
                 ),
             )
 
