@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Iterable
+from itertools import product
 from math import ceil
 from typing import cast, override
 
@@ -193,7 +194,7 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                     min_dist = min(
                         (
                             cast(float, top.graph.edges[u, v]["weight"])
-                            for u, v in zip(dzi.nodes, dzj.nodes)
+                            for u, v in product(dzi.nodes, dzj.nodes)
                             if top.graph.has_edge(u, v)
                         ),
                         default=None,
