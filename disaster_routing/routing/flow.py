@@ -61,16 +61,9 @@ def extract_all_flow_paths(
     G: StrDiGraph,
     source: str,
     sink: str,
-    flow_dict_n: dict[str, dict[str, int]] | None = None,
+    flow_dict: dict[str, dict[str, int]],
 ) -> list[list[str]]:
-    flow_dict = (
-        flow_dict_n
-        if flow_dict_n is not None
-        else cast(dict[int, dict[str, int]], nx.min_cost_flow(G))
-    )
-
-    # Convert flow_dict into a modifiable flow graph
-    flow_graph = {u: dict(v) for u, v in flow_dict.items()}
+    # flow_graph = {u: dict(v) for u, v in flow_dict.items()}
 
     paths: list[list[str]] = []
 
@@ -78,10 +71,10 @@ def extract_all_flow_paths(
         path = [source]
         current = source
         while current != sink:
-            for neighbor, flow in flow_graph[current].items():
+            for neighbor, flow in flow_dict[current].items():
                 if flow > 0:
                     path.append(neighbor)
-                    flow_graph[current][neighbor] -= 1  # consume flow
+                    flow_dict[current][neighbor] -= 1  # consume flow
                     current = neighbor
                     break
             else:
