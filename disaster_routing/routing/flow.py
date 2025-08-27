@@ -251,6 +251,10 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                             for dz in top.dzs
                         ):
                             free_nodes.remove(node)
+                    for i, node in enumerate(path):
+                        if node in dst:
+                            path = path[: i + 1]
+                            break
                     route = Route(top, path)
                     dzs = route.affected_dzs()
                     dzs = {dz for dz in dzs if req.source not in dz.nodes}
