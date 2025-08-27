@@ -256,10 +256,11 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                     dzs = {dz for dz in dzs if req.source not in dz.nodes}
                     affected_nodes.update(node for dz in dzs for node in dz.nodes)
                     routes.append(Route(top, path))
-                    cost = self.route_set_cost(routes, req.bpsk_fs_count)
-                    if cost < best_route_set_cost:
-                        best_route_set = tuple(routes)
-                        best_route_set_cost = cost
+                    if len(routes) >= 2:
+                        cost = self.route_set_cost(routes, req.bpsk_fs_count)
+                        if cost < best_route_set_cost:
+                            best_route_set = tuple(routes)
+                            best_route_set_cost = cost
             except nx.NetworkXUnfeasible:
                 break
             except InfeasibleRouteError:
