@@ -252,7 +252,9 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                         ):
                             free_nodes.remove(node)
                     for i, node in enumerate(path):
-                        if node in dst:
+                        if node in dst and not any(
+                            route.node_list[-1] == node for route in routes
+                        ):
                             path = path[: i + 1]
                             break
                     route = Route(top, path)
