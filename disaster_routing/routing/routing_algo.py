@@ -108,8 +108,6 @@ class RoutingAlgorithm(ABC):
             for route in routes
         ]
 
-        print([r.node_list for r in routes])
-
         for i in range(len(dzs)):
             for j in range(i + 1, len(dzs)):
                 dz1, dz2 = dzs[i], dzs[j]
