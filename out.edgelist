@@ -1,0 +1,42 @@
+source DZ2
+DZ0_source DZ0_sink
+DZ0_sink DZ1_source 391
+DZ0_sink DZ2 391
+DZ0_sink DZ4_source 1311
+DZ1_source DZ1_sink
+DZ1_sink sink
+DZ1_sink DZ0_source 391
+DZ1_sink DZ2 211
+DZ1_sink DZ3_source 401
+DZ1_sink DZ4_source 1091
+DZ1_sink DZ5_source 1091
+DZ2 DZ0_source 391
+DZ2 DZ1_source 211
+DZ2 DZ3_source 351
+DZ2 DZ4_source 661
+DZ2 DZ5_source 661
+DZ2 DZ6_source 731
+DZ3_source DZ3_sink
+DZ3_sink sink
+DZ3_sink DZ1_source 401
+DZ3_sink DZ2 351
+DZ3_sink DZ5_source 566
+DZ3_sink DZ6_source 566
+DZ4_source DZ4_sink
+DZ4_sink DZ0_source 1311
+DZ4_sink DZ1_source 1091
+DZ4_sink DZ2 661
+DZ4_sink DZ5_source 341
+DZ4_sink DZ6_source 341
+DZ5_source DZ5_sink
+DZ5_sink DZ1_source 1091
+DZ5_sink DZ2 661
+DZ5_sink DZ3_source 566
+DZ5_sink DZ4_source 341
+DZ5_sink DZ6_source 321
+DZ6_source DZ6_sink
+DZ6_sink sink
+DZ6_sink DZ2 731
+DZ6_sink DZ3_source 566
+DZ6_sink DZ4_source 341
+DZ6_sink DZ5_source 321
