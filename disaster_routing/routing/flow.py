@@ -232,7 +232,10 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                                 dz_route_i[k1].difference_update(dz_route_j[k2])
                 routes: list[Route] = []
                 free_nodes = init_free_nodes(top, req, dz_set_lists)
+                affected_nodes: set[int] = set()
                 for dz_set_list in dz_set_lists:
+                    for dz_set in dz_set_list:
+                        dz_set.difference_update(affected_nodes)
                     path = reconstruct_min_hop_path(
                         top.graph,
                         req.source,
@@ -248,8 +251,11 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                             for dz in top.dzs
                         ):
                             free_nodes.remove(node)
+                    route = Route(top, path)
+                    dzs = route.affected_dzs()
+                    dzs = {dz for dz in dzs if req.source not in dz.nodes}
+                    affected_nodes.update(node for dz in dzs for node in dz.nodes)
                     routes.append(Route(top, path))
-                if len(routes) >= 2:
                     cost = self.route_set_cost(routes, req.bpsk_fs_count)
                     if cost < best_route_set_cost:
                         best_route_set = tuple(routes)
