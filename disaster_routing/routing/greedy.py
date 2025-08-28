@@ -54,11 +54,13 @@ class GreedyRoutingAlgorithm(RoutingAlgorithm):
 
             path = ilist[int](paths[nearest_node])
             for dz in top.dzs:
-                if dz.affects_path(path):
-                    dz.remove_from_graph(graph, exclude_node=req.source)
+                if dz.affects_path(path) and req.source not in dz.nodes:
+                    dz.remove_from_graph(graph)
 
             assert req.source in graph
             dst.intersection_update(graph.nodes)
+            if path[-1] in dst:
+                dst.remove(path[-1])
 
             dist = nx.path_weight(top.graph, path, "weight")
             format = ModulationFormat.best_rate_format_with_distance(dist)
