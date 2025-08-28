@@ -37,6 +37,14 @@ class LSSolverConfig(CDPSolverConfig):
 
 
 @dataclass
+class ELSSolverConfig(CDPSolverConfig):
+    _recursive_: bool = False
+    _target_: str = "disaster_routing.solver.ls.ELSSolver"
+    base: CDPSolverConfig = MISSING
+    f_max: int = 100
+
+
+@dataclass
 class ILPSolverConfig(CDPSolverConfig):
     _target_: str = "disaster_routing.solver.ilp.ILPCDPSolver"
     msg: bool = False
@@ -69,6 +77,7 @@ def register_solver_configs(group: str = "solver", recursive_limit: int = 3):
     cs.store(group=group, name="ilp", node=ILPSolverConfig)
     cs.store(group=group, name="sga", node=SGASolverConfig)
     cs.store(group=group, name="ls", node=LSSolverConfig)
+    cs.store(group=group, name="els", node=ELSSolverConfig)
 
     register_routing_algo_configs(f"{group}.router")
     register_dsa_solver_configs(f"{group}.dsa_solver")
