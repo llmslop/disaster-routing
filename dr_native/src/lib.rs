@@ -114,7 +114,7 @@ fn fpga_solve_for_odsa_perm(
     let result = start_indices
         .into_iter()
         .map(|first| fpga_solve_perm_with_first(num_nodes, &adj, first, &num_fses))
-        .max_by_key(|(_, mofi)| *mofi)
+        .min_by_key(|(_, mofi)| *mofi)
         .map(|(result, _)| result)
         .expect("should not be None");
     Ok(result)

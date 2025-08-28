@@ -7,7 +7,7 @@ from typing import override
 from disaster_routing.instances.instance import Instance
 from disaster_routing.instances.modulation import ModulationFormat
 from disaster_routing.instances.request import Request
-from disaster_routing.topologies.topology import Topology
+from disaster_routing.topologies.topology import DisasterZone, Topology
 from disaster_routing.utils.ilist import ilist
 
 
@@ -40,6 +40,13 @@ class Route:
 
     def distance(self) -> int:
         return sum(self.top.graph.edges[u, v]["weight"] for u, v in self.edges())
+
+    def affected_dzs(self) -> set[DisasterZone]:
+        return {
+            dz
+            for dz in self.top.dzs
+            if any(node in dz.nodes for node in self.node_list)
+        }
 
     def edges(self) -> list[tuple[int, int]]:
         return [
