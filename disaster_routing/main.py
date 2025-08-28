@@ -85,12 +85,13 @@ def my_main(cfg: MainConfig):
         content_placement_strategy.verify_placement(instance, content_placement)
     log.debug(SL("Content placement", placement=content_placement))
 
-    evaluator = cast(
-        Evaluator,
-        instantiate(cfg.eval, instance=instance, content_placement=content_placement),
-    )
-
     if cfg.solver is not None:
+        evaluator = cast(
+            Evaluator,
+            instantiate(
+                cfg.eval, instance=instance, content_placement=content_placement
+            ),
+        )
         solver = cast(CDPSolver, instantiate(cfg.solver, evaluator=evaluator))
         log.info(SL("Solver details", name=solver.name()))
 

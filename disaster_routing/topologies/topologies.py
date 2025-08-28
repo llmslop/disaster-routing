@@ -1,6 +1,7 @@
 from disaster_routing.topologies.cost239 import cost239
 from disaster_routing.topologies.nsfnet import nsfnet
 from disaster_routing.topologies.topology import Topology
+from disaster_routing.topologies.us_backbone import us_backbone
 
 
 def get_topology(name: str) -> Topology:
@@ -9,5 +10,7 @@ def get_topology(name: str) -> Topology:
             return nsfnet()
         case "cost239":
             return cost239()
+        case "usb":
+            return us_backbone()
         case _:
             raise ValueError(f"Invalid topology name: {name}")

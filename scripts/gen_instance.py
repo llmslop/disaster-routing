@@ -6,8 +6,9 @@ import sys
 
 dir = "instances/dataset-1"
 topologies = {
-    "nsfnet": [2, 5, 6, 9, 11],
-    "cost239": [1, 2, 7, 8, 11],
+    "nsfnet": ([2, 5, 6, 9, 11], 3),
+    "cost239": ([1, 2, 7, 8, 11], 3),
+    "usb": ([1, 7, 9, 12, 14, 19, 21, 28], 5),
 }
 instance_sets = [
     (10, 10),
@@ -26,7 +27,7 @@ if "-f" in sys.argv[1:] or "--force" in sys.argv[1:]:
         shutil.rmtree(dir)
 os.makedirs(dir, exist_ok=True)
 
-for topology, dc_pos in topologies.items():
+for topology, (dc_pos, dc_count) in topologies.items():
     for size, num in instance_sets:
         for inst_num in range(num):
             cmd = (
@@ -35,6 +36,7 @@ for topology, dc_pos in topologies.items():
                 + f"instance.possible_dc_positions=[{','.join(map(str, dc_pos))}] "
                 + f"instance.num_requests={size} "
                 + f"instance.topology_name={topology} "
+                + f"instance.dc_count={dc_count} "
                 + "ilp_check=false "
             )
             code = os.system(cmd)
