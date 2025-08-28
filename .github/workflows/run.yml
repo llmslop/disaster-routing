@@ -21,6 +21,8 @@ jobs:
             label: "large-nsfnet"
           - pattern: "cost239-0100"
             label: "large-cost239"
+          - pattern: "usb-0100"
+            label: "large-usb"
           - pattern: "nsfnet-0200"
             label: "huge200-nsfnet"
           - pattern: "nsfnet-0300"
@@ -33,6 +35,12 @@ jobs:
             label: "huge300-cost239"
           - pattern: "cost239-0400"
             label: "huge400-cost239"
+          - pattern: "usb-0200"
+            label: "huge200-usb"
+          - pattern: "usb-0300"
+            label: "huge300-usb"
+          - pattern: "usb-0400"
+            label: "huge400-usb"
 
     name: Run ${{ matrix.label }} instances
 
