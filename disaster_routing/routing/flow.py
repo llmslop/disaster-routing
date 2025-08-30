@@ -123,7 +123,6 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
     @override
     def route_request(self, req: Request, top: Topology, dst: set[int]) -> ilist[Route]:
         assert len(dst) >= 2
-        dst = set(dst)
 
         best_route_set: ilist[Route] | None = None
         best_route_set_cost = np.inf
@@ -214,13 +213,14 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                 routes: list[Route] = []
                 free_nodes = init_free_nodes(top, req, dz_set_lists)
                 affected_nodes: set[int] = set()
+                remaining_dsts = set(dst)
                 for dz_set_list in dz_set_lists:
                     for dz_set in dz_set_list:
                         dz_set.difference_update(affected_nodes)
                     path = reconstruct_min_hop_path(
                         top.graph,
                         req.source,
-                        dst,
+                        remaining_dsts,
                         dz_set_list,
                         free_nodes,
                     )
@@ -233,9 +233,7 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                         ):
                             free_nodes.remove(node)
                     for i, node in enumerate(path):
-                        if node in dst and not any(
-                            route.node_list[-1] == node for route in routes
-                        ):
+                        if node in remaining_dsts:
                             path = path[: i + 1]
                             break
                     route = Route(top, path)
@@ -243,7 +241,7 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                     dzs = {dz for dz in dzs if req.source not in dz.nodes}
                     affected_nodes.update(node for dz in dzs for node in dz.nodes)
                     routes.append(Route(top, path))
-                    dst.remove(path[-1])
+                    remaining_dsts.remove(path[-1])
                     if len(routes) >= 2:
                         cost = self.route_set_cost(routes, req.bpsk_fs_count)
                         if cost < best_route_set_cost:
