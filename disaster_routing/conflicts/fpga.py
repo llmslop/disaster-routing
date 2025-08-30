@@ -82,7 +82,7 @@ class FPGADSASolver(DSASolver):
     @override
     def solve_for_odsa_perm(self, conflict_graph: ConflictGraph) -> list[int]:
         start_indices = list(conflict_graph.graph.nodes)
-        if self.num_attempts > 0:
+        if self.num_attempts > 0 and self.num_attempts < len(start_indices):
             assert self.random is not None
             start_indices = self.random.stdlib.sample(
                 start_indices, k=self.num_attempts
