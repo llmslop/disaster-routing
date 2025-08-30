@@ -224,23 +224,28 @@ class Individual:
 
                 if len(all_routes[k]) <= 2:
                     del chances["prune"]
-
-                dcs = content_placement[inst.requests[k].content_id].difference(
-                    route.node_list[-1] for route in all_routes[k]
-                )
-                # try to generate new route
-                new_route = Individual.generate_new_route(
-                    random,
-                    inst,
-                    dist_map[
-                        tuple(sorted(content_placement[inst.requests[k].content_id]))
-                    ],
-                    inst.requests[k],
-                    all_routes[k],
-                    tuple(dcs),
-                )
-                if new_route is None:
+                new_route: Route | None = None
+                if len(all_routes[k]) > inst.requests[k].max_path_count:
                     del chances["new"]
+                else:
+                    dcs = content_placement[inst.requests[k].content_id].difference(
+                        route.node_list[-1] for route in all_routes[k]
+                    )
+                    # try to generate new route
+                    new_route = Individual.generate_new_route(
+                        random,
+                        inst,
+                        dist_map[
+                            tuple(
+                                sorted(content_placement[inst.requests[k].content_id])
+                            )
+                        ],
+                        inst.requests[k],
+                        all_routes[k],
+                        tuple(dcs),
+                    )
+                    if new_route is None:
+                        del chances["new"]
 
                 choices = list(chances.keys())
                 chances = [float(chances[c]) for c in choices]
