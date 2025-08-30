@@ -95,6 +95,7 @@ class RoutingAlgorithm(ABC):
 
     @staticmethod
     def check_solution(req: Request, dst: Iterable[int], routes: ilist[Route]):
+        assert req.max_path_count >= len(routes) >= 2
         tops = set(route.top for route in routes)
         assert len(tops) == 1
 

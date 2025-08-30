@@ -132,7 +132,10 @@ class Individual:
             while True:
                 all_routes[k] = ()
                 dcs = set(content_placement[req.content_id])
-                while len(dcs) > 0:
+                while (
+                    len(dcs) > 0
+                    and len(all_routes[k]) < inst.requests[k].max_path_count
+                ):
                     route = Individual.generate_new_route(
                         random,
                         inst,
@@ -161,6 +164,8 @@ class Individual:
     ) -> "Individual | None":
         all_routes: list[ilist[Route]] = []
         for i, (r1, r2) in enumerate(zip(self.all_routes, other.all_routes)):
+            assert len(r1) <= inst.requests[i].max_path_count
+            assert len(r2) <= inst.requests[i].max_path_count
             all_routes.append(random.stdlib.choice([r1, r2]))
         return Individual(tuple(all_routes))
 
@@ -225,7 +230,7 @@ class Individual:
                 if len(all_routes[k]) <= 2:
                     del chances["prune"]
                 new_route: Route | None = None
-                if len(all_routes[k]) > inst.requests[k].max_path_count:
+                if len(all_routes[k]) >= inst.requests[k].max_path_count:
                     del chances["new"]
                 else:
                     dcs = content_placement[inst.requests[k].content_id].difference(
@@ -257,7 +262,10 @@ class Individual:
                         routes: ilist[Route] = ()
                         dcs = set(content_placement[inst.requests[k].content_id])
                         for _ in range(num_retries_per_req):
-                            while len(dcs) > 0:
+                            while (
+                                len(dcs) > 0
+                                and len(routes) < inst.requests[k].max_path_count
+                            ):
                                 route = Individual.generate_new_route(
                                     random,
                                     inst,
@@ -286,6 +294,7 @@ class Individual:
                     case _:
                         continue
 
+                assert len(all_routes[k]) <= inst.requests[k].max_path_count
             return Individual(tuple(all_routes))
         except InfeasibleRouteError:
             return None
