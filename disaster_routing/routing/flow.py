@@ -156,7 +156,7 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
         best_route_set: ilist[Route] | None = None
         best_route_set_cost = np.inf
 
-        for K in range(2, len(dst) + 1):
+        for K in range(2, min(len(dst), req.max_path_count) + 1):
             flow_graph = StrDiGraph()
 
             flow_graph.add_node("source", demand=-K)

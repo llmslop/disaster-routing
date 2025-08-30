@@ -33,7 +33,7 @@ class GreedyRoutingAlgorithm(RoutingAlgorithm):
         best_route_set: ilist[Route] | None = None
         best_route_set_cost = np.inf
 
-        for K in range(len(dst)):
+        for K in range(min(len(dst), req.max_path_count)):
             distances, paths = cast(
                 tuple[dict[int, int], dict[int, list[int]]],
                 nx.single_source_dijkstra(
