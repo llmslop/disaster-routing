@@ -108,7 +108,7 @@ def reconstruct_min_hop_path(
     out = min(outs, key=lambda x: length.get(x, np.inf), default=None)
     if out is None:
         return ()
-    return path[out]
+    return ilist[int](path[out])
 
 
 class FlowRoutingAlgorithm(RoutingAlgorithm):
