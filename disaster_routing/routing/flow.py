@@ -224,7 +224,6 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                         dz_set_list,
                         free_nodes,
                     )
-                    print(req.source, dst, dz_set_list, free_nodes)
                     if len(path) == 0:
                         break
                     for node in free_nodes.intersection(path):
@@ -247,7 +246,6 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                     dst.remove(path[-1])
                     if len(routes) >= 2:
                         cost = self.route_set_cost(routes, req.bpsk_fs_count)
-                        print(routes)
                         if cost < best_route_set_cost:
                             best_route_set = tuple(routes)
                             best_route_set_cost = cost
