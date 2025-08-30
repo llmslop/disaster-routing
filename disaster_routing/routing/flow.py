@@ -100,44 +100,15 @@ def reconstruct_min_hop_path(
     group_path: list[set[int]],
     free_nodes: set[int],
 ) -> ilist[int]:
-    group_path = [{source}] + group_path + [group_path[-1].intersection(avail_outs)]
-    # group_path: list of sets of nodes (G1, G2, ..., Gk)
-    # Returns: (min_path, hop_count)
-
-    # For each node in the current group, store:
-    # (min_total_hops_to_get_here, path_so_far)
-    dp = {v: (0, [v]) for v in group_path[0]}
-
-    for i in range(1, len(group_path)):
-        next_dp = {}
-        for u in group_path[i]:
-            best = None
-            for v in group_path[i - 1]:
-                if v in dp:
-                    try:
-                        path = nx.shortest_path(
-                            G.subgraph(
-                                free_nodes.union(group_path[i - 1]).union(group_path[i])
-                            ),
-                            dp[v][1][-1],
-                            u,
-                        )
-                        hops = len(path) - 1
-                        total_hops = dp[v][0] + hops
-                        if best is None or total_hops < best[0]:
-                            best = (total_hops, dp[v][1] + path[1:])
-                    except nx.NetworkXNoPath:
-                        continue
-            if best:
-                next_dp[u] = best
-        dp = next_dp
-
-        if not dp:
-            return ()  # no path possible
-
-    # Get the best among last group
-    _, (total_hops, path) = min(dp.items(), key=lambda x: x[1][0])
-    return ilist[int](path)
+    nodes = group_path[0].union(*group_path[1:]).union(free_nodes)
+    outs = nodes.intersection(avail_outs)
+    graph = G.subgraph(nodes)
+    length, path = nx.single_source_dijkstra(graph, source)
+    outs = [out for out in outs if out in length]
+    out = min(outs, key=lambda x: length.get(x, np.inf), default=None)
+    if out is None:
+        return ()
+    return path[out]
 
 
 class FlowRoutingAlgorithm(RoutingAlgorithm):
@@ -152,6 +123,7 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
     @override
     def route_request(self, req: Request, top: Topology, dst: set[int]) -> ilist[Route]:
         assert len(dst) >= 2
+        dst = set(dst)
 
         best_route_set: ilist[Route] | None = None
         best_route_set_cost = np.inf
@@ -187,6 +159,9 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                     else:
                         flow_graph.add_edge(sink_nodes[i], "sink", capacity=1)
 
+            dists = nx.single_source_dijkstra_path_length(top.graph, req.source)
+            beta = 0.7
+
             for i, dzi in enumerate(top.dzs):
                 for j in range(i + 1, len(top.dzs)):
                     dzj = top.dzs[j]
@@ -201,6 +176,12 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                     )
 
                     if min_dist is not None:
+                        if req.source in dzi.nodes:
+                            min_dist_from_src = min(dists[v] for v in dzj.nodes)
+                            min_dist = min_dist * beta + (1 - beta) * min_dist_from_src
+                        elif req.source in dzj.nodes:
+                            min_dist_from_src = min(dists[v] for v in dzi.nodes)
+                            min_dist = min_dist * beta + (1 - beta) * min_dist_from_src
                         weight = int(min_dist + self.inv_alpha)
                         flow_graph.add_edge(
                             sink_nodes[i],
@@ -243,6 +224,7 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                         dz_set_list,
                         free_nodes,
                     )
+                    print(req.source, dst, dz_set_list, free_nodes)
                     if len(path) == 0:
                         break
                     for node in free_nodes.intersection(path):
@@ -262,8 +244,10 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                     dzs = {dz for dz in dzs if req.source not in dz.nodes}
                     affected_nodes.update(node for dz in dzs for node in dz.nodes)
                     routes.append(Route(top, path))
+                    dst.remove(path[-1])
                     if len(routes) >= 2:
                         cost = self.route_set_cost(routes, req.bpsk_fs_count)
+                        print(routes)
                         if cost < best_route_set_cost:
                             best_route_set = tuple(routes)
                             best_route_set_cost = cost
