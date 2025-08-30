@@ -22,7 +22,7 @@ class FlowRoutingAlgorithmConfig(RoutingAlgorithmConfig):
 
 @dataclass
 class FlowDPRoutingAlgorithmConfig(RoutingAlgorithmConfig):
-    _target_: str = "disaster_routing.routing.flow_dp.FlowDPRoutingAlgorithm"
+    _target_: str = "disaster_routing.routing.flow.FlowDPRoutingAlgorithm"
     _short_: str = "flow_dp"
 
 
