@@ -55,10 +55,10 @@ jobs:
         run: uv venv && cd dr_native && uv tool run maturin develop --release
 
       - name: Solve via two-phase algorithms
-        run: scripts/run_all.sh --pattern=${{ matrix.pattern }} +solver=two_phase +solver.router=greedy,flow +solver.dsa_solver=npm
+        run: scripts/run_all.sh --pattern=${{ matrix.pattern }} +solver=two_phase +solver.router=greedy,flow,flow_dp +solver.dsa_solver=npm
 
       - name: Solve via LS-based two-phase algorithms
-        run: scripts/run_all.sh --pattern=${{ matrix.pattern }} +solver=ls +solver.base=two_phase +solver.base.router=greedy,flow +solver.base.dsa_solver=npm
+        run: scripts/run_all.sh --pattern=${{ matrix.pattern }} +solver=ls +solver.base=two_phase +solver.base.router=greedy,flow,flow_dp +solver.base.dsa_solver=npm
 
       - name: Solve via SGA
         run: scripts/run_all.sh --pattern=${{ matrix.pattern }} +solver=sga +solver.approximate_dsa_solver=fpga +solver.dsa_solver=npm

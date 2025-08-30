@@ -93,28 +93,28 @@ def extract_all_flow_paths(
     return paths
 
 
-def reconstruct_min_hop_path(
-    G: Graph,
-    source: int,
-    avail_outs: Iterable[int],
-    group_path: list[set[int]],
-    free_nodes: set[int],
-) -> ilist[int]:
-    nodes = group_path[0].union(*group_path[1:]).union(free_nodes)
-    outs = nodes.intersection(avail_outs)
-    graph = G.subgraph(nodes)
-    length, path = nx.single_source_dijkstra(graph, source)
-    outs = [out for out in outs if out in length]
-    out = min(outs, key=lambda x: length.get(x, np.inf), default=None)
-    if out is None:
-        return ()
-    return ilist[int](path[out])
-
-
 class FlowRoutingAlgorithm(RoutingAlgorithm):
     def __init__(self, *_: object, **__: object) -> None:
         self.inv_alpha: float = 1
         pass
+
+    def reconstruct_min_hop_path(
+        self,
+        G: Graph,
+        source: int,
+        avail_outs: Iterable[int],
+        group_path: list[set[int]],
+        free_nodes: set[int],
+    ) -> ilist[int]:
+        nodes = group_path[0].union(*group_path[1:]).union(free_nodes)
+        outs = nodes.intersection(avail_outs)
+        graph = G.subgraph(nodes)
+        length, path = nx.single_source_dijkstra(graph, source)
+        outs = [out for out in outs if out in length]
+        out = min(outs, key=lambda x: length.get(x, np.inf), default=None)
+        if out is None:
+            return ()
+        return ilist[int](path[out])
 
     @override
     def name(self) -> str:
@@ -217,7 +217,7 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
                 for dz_set_list in dz_set_lists:
                     for dz_set in dz_set_list:
                         dz_set.difference_update(affected_nodes)
-                    path = reconstruct_min_hop_path(
+                    path = self.reconstruct_min_hop_path(
                         top.graph,
                         req.source,
                         remaining_dsts,
@@ -272,3 +272,53 @@ class FlowRoutingAlgorithm(RoutingAlgorithm):
 
             cost += num_links * num_fs_per_link
         return cost
+
+
+class FlowDPRoutingAlgorithm(FlowRoutingAlgorithm):
+    @override
+    def name(self) -> str:
+        return "flow_dp"
+
+    @override
+    def reconstruct_min_hop_path(
+        self,
+        G: Graph,
+        source: int,
+        avail_outs: Iterable[int],
+        group_path: list[set[int]],
+        free_nodes: set[int],
+    ) -> ilist[int]:
+        group_path = [{source}] + group_path + [group_path[-1].intersection(avail_outs)]
+        dp = {v: (0, [v]) for v in group_path[0]}
+
+        for i in range(1, len(group_path)):
+            next_dp = {}
+            for u in group_path[i]:
+                best = None
+                for v in group_path[i - 1]:
+                    if v in dp:
+                        try:
+                            path = nx.shortest_path(
+                                G.subgraph(
+                                    free_nodes.union(group_path[i - 1]).union(
+                                        group_path[i]
+                                    )
+                                ),
+                                dp[v][1][-1],
+                                u,
+                            )
+                            hops = len(path) - 1
+                            total_hops = dp[v][0] + hops
+                            if best is None or total_hops < best[0]:
+                                best = (total_hops, dp[v][1] + path[1:])
+                        except nx.NetworkXNoPath:
+                            continue
+                if best:
+                    next_dp[u] = best
+            dp = next_dp
+
+            if not dp:
+                return ()  # no path possible
+
+        _, (total_hops, path) = min(dp.items(), key=lambda x: x[1][0])
+        return ilist[int](path)

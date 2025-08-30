@@ -12,7 +12,7 @@ from disaster_routing.eval.evaluator import Evaluator
 from disaster_routing.instances.instance import Instance
 from disaster_routing.instances.request import Request
 from disaster_routing.random.random import Random
-from disaster_routing.routing.flow import FlowRoutingAlgorithm
+from disaster_routing.routing.flow import FlowDPRoutingAlgorithm, FlowRoutingAlgorithm
 from disaster_routing.routing.routing_algo import InfeasibleRouteError, Route
 from disaster_routing.solver.solution import CDPSolution
 from disaster_routing.solver.solver import CDPSolver
@@ -362,20 +362,20 @@ class SGASolver(CDPSolver):
         fitness_evaluator = FitnessEvaluator(
             inst, self.evaluator, self.approximate_dsa_solver
         )
+        algos = [FlowRoutingAlgorithm(), FlowDPRoutingAlgorithm()]
         population: list[Individual] = [
             Individual.random(self.random, inst, dist_map, content_placement)
-            for _ in range(self.pop_size - 1)
+            for _ in range(self.pop_size - len(algos))
         ]
-        try:
-            population.append(
-                Individual(
-                    FlowRoutingAlgorithm().route_instance(inst, content_placement)
+        for algo in algos:
+            try:
+                population.append(
+                    Individual(algo.route_instance(inst, content_placement))
                 )
-            )
-        except InfeasibleRouteError:
-            population.append(
-                Individual.random(self.random, inst, dist_map, content_placement)
-            )
+            except InfeasibleRouteError:
+                population.append(
+                    Individual.random(self.random, inst, dist_map, content_placement)
+                )
 
         cr_success_rate = SuccessRateStats()
         mut_success_rate = SuccessRateStats()
