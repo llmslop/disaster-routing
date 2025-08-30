@@ -18,14 +18,7 @@ class ContentPlacementStrategy(ABC):
 
     def max_num_paths(self, inst: Instance) -> dict[int, int]:
         contents = self.content_to_requests_dict(inst)
-        return {
-            content: inst.dc_count
-            # content: min(
-            #     inst.dc_count,
-            #     min(int(inst.topology.graph.in_degree[req.source]) for req in reqs),
-            # )
-            for content, reqs in contents.items()
-        }
+        return {content: inst.dc_count for content, reqs in contents.items()}
 
     def content_to_requests_dict(self, inst: Instance) -> dict[int, list[Request]]:
         return {

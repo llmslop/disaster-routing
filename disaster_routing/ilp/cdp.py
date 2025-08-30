@@ -231,10 +231,6 @@ class ILPCDP:
                 sm >= 2,
                 f"DC assignment and content placement constraints (3.1:{r_idx})",
             )
-            self.problem += (
-                sm <= max_paths[r_idx],
-                f"DC assignment and content placement constraints (3.2:{r_idx})",
-            )
 
         for r_idx, r in enumerate(inst.requests):
             for d in avail_dcs:
