@@ -36,9 +36,7 @@ def generate_dist_map(
     graph: Graph, dcs: set[int]
 ) -> dict[ilist[int], dict[int, float]]:
     return {
-        dc_subset: dict(
-            nx.multi_source_dijkstra_path_length(graph, dc_subset, weight=None)
-        )
+        dc_subset: dict(nx.multi_source_dijkstra_path_length(graph, dc_subset))
         for dc_subset in power_set(dcs)
     }
 
@@ -49,6 +47,7 @@ def randomized_dfs(
     dist_map: dict[int, float],
     start: int,
     end: list[int],
+    weight: float,
     visited: set[int] | None = None,
     path: list[int] | None = None,
 ) -> list[int] | None:
@@ -64,12 +63,12 @@ def randomized_dfs(
         return path.copy()
 
     neighbors = list(graph.adj[start])
-    neighbors.sort(key=lambda node: dist_map[node] * 0.5 + random.stdlib.random())
+    neighbors.sort(key=lambda node: dist_map[node] + weight * random.stdlib.random())
 
     for neighbor in neighbors:
         if neighbor not in visited:
             result = randomized_dfs(
-                random, graph, dist_map, neighbor, end, visited, path
+                random, graph, dist_map, neighbor, end, weight, visited, path
             )
             if result is not None:
                 return result
@@ -125,6 +124,7 @@ class Individual:
         inst: Instance,
         dist_map: dict[ilist[int], dict[int, float]],
         content_placement: dict[int, set[int]],
+        gamma: float,
     ) -> "Individual":
         all_routes: list[ilist[Route]] = [() for _ in inst.requests]
         num_retries = 0
@@ -143,6 +143,7 @@ class Individual:
                         req,
                         all_routes[k],
                         tuple(dcs),
+                        gamma,
                     )
                     num_retries += 1
                     if route is None:
@@ -182,6 +183,7 @@ class Individual:
         req: Request,
         routes: ilist[Route],
         dcs: ilist[int],
+        gamma: float,
     ) -> Route | None:
         topology = inst.topology.copy()
         for dz in topology.dzs:
@@ -194,7 +196,12 @@ class Individual:
         avail_dcs.difference_update((route.node_list[-1] for route in routes))
         while len(avail_dcs) > 0:
             route = randomized_dfs(
-                random, topology.graph, dist_map, req.source, list(avail_dcs)
+                random,
+                topology.graph,
+                dist_map,
+                req.source,
+                list(avail_dcs),
+                gamma,
             )
             if route is None:
                 break
@@ -214,6 +221,7 @@ class Individual:
         content_placement: dict[int, set[int]],
         mut_rate: float,
         num_retries_per_req: int,
+        gamma: float,
     ) -> "Individual | None":
         try:
             all_routes: list[ilist[Route]] = list(self.all_routes)
@@ -248,6 +256,7 @@ class Individual:
                         inst.requests[k],
                         all_routes[k],
                         tuple(dcs),
+                        gamma,
                     )
                     if new_route is None:
                         del chances["new"]
@@ -273,6 +282,7 @@ class Individual:
                                     inst.requests[k],
                                     routes,
                                     tuple(dcs),
+                                    gamma,
                                 )
                                 if route is None or random.stdlib.random() < 0.25:
                                     break
@@ -311,6 +321,7 @@ class SGASolver(CDPSolver):
     cr_num_retries_per_req: int
     mut_num_retries_per_req: int
     elitism_rate: float
+    gamma: float
 
     def __init__(
         self,
@@ -325,6 +336,7 @@ class SGASolver(CDPSolver):
         cr_num_retries_per_req: int,
         mut_num_retries_per_req: int,
         elitism_rate: float,
+        gamma: float = 0.5,
         **kwargs: object,
     ):
         super().__init__(evaluator)
@@ -338,6 +350,7 @@ class SGASolver(CDPSolver):
         self.cr_num_retries_per_req = cr_num_retries_per_req
         self.mut_num_retries_per_req = mut_num_retries_per_req
         self.elitism_rate = elitism_rate
+        self.gamma = gamma
 
     def select(
         self, population: list[Individual], fitness_evaluator: FitnessEvaluator
@@ -364,7 +377,9 @@ class SGASolver(CDPSolver):
         )
         algos = [FlowRoutingAlgorithm(), FlowDPRoutingAlgorithm()]
         population: list[Individual] = [
-            Individual.random(self.random, inst, dist_map, content_placement)
+            Individual.random(
+                self.random, inst, dist_map, content_placement, self.gamma
+            )
             for _ in range(self.pop_size - len(algos))
         ]
         for algo in algos:
@@ -374,7 +389,9 @@ class SGASolver(CDPSolver):
                 )
             except InfeasibleRouteError:
                 population.append(
-                    Individual.random(self.random, inst, dist_map, content_placement)
+                    Individual.random(
+                        self.random, inst, dist_map, content_placement, self.gamma
+                    )
                 )
 
         cr_success_rate = SuccessRateStats()
@@ -418,6 +435,7 @@ class SGASolver(CDPSolver):
                         content_placement,
                         self.mut_rate,
                         self.mut_num_retries_per_req,
+                        self.gamma,
                     )
                     mut_success_rate.update(child is not None)
                 if child is None:
