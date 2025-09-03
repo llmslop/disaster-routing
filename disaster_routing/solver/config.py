@@ -61,7 +61,6 @@ class SGASolverConfig(CDPSolverConfig):
     cr_num_retries_per_req: int = 10
     mut_num_retries_per_req: int = 10
     elitism_rate: float = 0.04
-    gamma: float = 1500.0
 
 
 def register_solver_configs(group: str = "solver", recursive_limit: int = 3):
