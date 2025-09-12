@@ -12,7 +12,6 @@ from disaster_routing.eval.evaluator import Evaluator
 from disaster_routing.instances.instance import Instance
 from disaster_routing.instances.request import Request
 from disaster_routing.random.random import Random
-from disaster_routing.routing.flow import FlowDPRoutingAlgorithm, FlowRoutingAlgorithm
 from disaster_routing.routing.routing_algo import InfeasibleRouteError, Route
 from disaster_routing.solver.solution import CDPSolution
 from disaster_routing.solver.solver import CDPSolver
@@ -375,7 +374,7 @@ class SGASolver(CDPSolver):
         fitness_evaluator = FitnessEvaluator(
             inst, self.evaluator, self.approximate_dsa_solver
         )
-        algos = [FlowRoutingAlgorithm(), FlowDPRoutingAlgorithm()]
+        algos = []
         population: list[Individual] = [
             Individual.random(
                 self.random, inst, dist_map, content_placement, self.gamma
