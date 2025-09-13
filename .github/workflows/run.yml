@@ -60,8 +60,11 @@ jobs:
       - name: Solve via LS-based two-phase algorithms
         run: scripts/run_all.sh --pattern=${{ matrix.pattern }} +solver=ls +solver.base=two_phase +solver.base.router=greedy,flow,flow_dp +solver.base.dsa_solver=npm
 
-      - name: Solve via SGA
+      - name: Solve via SGA (hybrid init)
         run: scripts/run_all.sh --pattern=${{ matrix.pattern }} +solver=sga +solver.approximate_dsa_solver=fpga +solver.dsa_solver=npm
+
+      - name: Solve via SGA (random init)
+        run: scripts/run_all.sh --pattern=${{ matrix.pattern }} +solver=sga +solver.approximate_dsa_solver=fpga +solver.dsa_solver=npm +solver.hybrid_init=false
 
       - name: Process results
         run: mkdir multirun/results && uv run scripts/collect_logs.py multirun | uv run scripts/process_results.py > multirun/results/processed-${{ matrix.label }}.xlsx
