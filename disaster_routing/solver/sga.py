@@ -322,6 +322,7 @@ class SGASolver(CDPSolver):
     mut_num_retries_per_req: int
     elitism_rate: float
     gamma: float
+    hybrid_init: bool
 
     def __init__(
         self,
@@ -336,6 +337,7 @@ class SGASolver(CDPSolver):
         cr_num_retries_per_req: int,
         mut_num_retries_per_req: int,
         elitism_rate: float,
+        hybrid_init: bool,
         gamma: float = 0.5,
         **kwargs: object,
     ):
@@ -351,6 +353,7 @@ class SGASolver(CDPSolver):
         self.mut_num_retries_per_req = mut_num_retries_per_req
         self.elitism_rate = elitism_rate
         self.gamma = gamma
+        self.hybrid_init = hybrid_init
 
     def select(
         self, population: list[Individual], fitness_evaluator: FitnessEvaluator
@@ -375,7 +378,10 @@ class SGASolver(CDPSolver):
         fitness_evaluator = FitnessEvaluator(
             inst, self.evaluator, self.approximate_dsa_solver
         )
-        algos = [FlowRoutingAlgorithm(), FlowDPRoutingAlgorithm()]
+        if self.hybrid_init:
+            algos = [FlowRoutingAlgorithm(), FlowDPRoutingAlgorithm()]
+        else:
+            algos = []
         population: list[Individual] = [
             Individual.random(
                 self.random, inst, dist_map, content_placement, self.gamma
@@ -480,7 +486,8 @@ class SGASolver(CDPSolver):
 
     @override
     def name(self) -> str:
-        return f"sga({self.approximate_dsa_solver.name()}, {self.dsa_solver.name()})"
+        name = "sga_hi" if self.hybrid_init else "sga_ri"
+        return f"{name}({self.approximate_dsa_solver.name()}, {self.dsa_solver.name()})"
 
     @override
     def solve(
