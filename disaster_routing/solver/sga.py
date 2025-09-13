@@ -486,7 +486,8 @@ class SGASolver(CDPSolver):
 
     @override
     def name(self) -> str:
-        return f"sga({self.approximate_dsa_solver.name()}, {self.dsa_solver.name()})"
+        name = "sga_hi" if self.hybrid_init else "sga_ri"
+        return f"{name}({self.approximate_dsa_solver.name()}, {self.dsa_solver.name()})"
 
     @override
     def solve(
