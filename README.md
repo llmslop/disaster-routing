@@ -66,6 +66,10 @@ More specifics on the options are provided below. The CI file
 `.github/workflows/ci.yml` provides the specific commands used in the paper's
 experiments.
 
+> [!NOTE]
+> Results presented in our paper is produced from the CI artifacts of commit
+> [06ac3c71c2a97c812f7e331422d2a2e0a10e79ae](https://github.com/llmslop/disaster-routing/commit/06ac3c71c2a97c812f7e331422d2a2e0a10e79ae).
+
 ### RNG seeding
 
 > [!NOTE]
